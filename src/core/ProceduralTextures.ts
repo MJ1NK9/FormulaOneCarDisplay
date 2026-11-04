@@ -194,8 +194,8 @@ export function createFloorTexture(floor: RoomConfig["floor"]): CanvasTexture {
  * 主屏 + 左右副屏共用的一份「比赛回放」状态。
  *
  * 数据来自 OpenF1 的 2024 圣保罗正赛（session_key 9636）：
- * 官方分类 69 圈，展示上补到原定的 71 圈，第 70、71 圈没有遥测，
- * 用红旗占位各停 4s。时间轴常量在 `config/raceReplay.ts`。
+ * 官方分类 69 圈，回放按 69 圈播；第 33 圈红旗只显示卡片。
+ * 时间轴常量在 `config/raceReplay.ts`。
  *
  * 为什么把圈数 / 播放头 / 完赛状态放在这里统一算：
  * 三块屏各自只有一张 canvas 贴图，刷新时刻也略有差异；只要它们都从
@@ -216,7 +216,7 @@ interface RaceWeather {
 
 interface RaceLap {
   readonly lap: number;
-  /** 官方圈速；70、71 圈没有跑，值为 null */
+  /** 官方圈速 */
   readonly time: number | null;
   readonly sectors: readonly [number, number, number] | null;
   readonly position: number;
@@ -368,7 +368,7 @@ interface ReplayState {
 /**
  * 把「页面运行了多少秒」映射成「第几圈、圈内进度」。
  *
- * 上电扫描 1.5s 后发车；69 圈真实数据 + 2 圈红旗占位各 4s；
+ * 上电扫描 1.5s 后发车；69 圈真实数据各 4s；
  * 跑完后定格 5s，再从头循环。所有屏都调用这一个函数，状态天然一致。
  */
 function replayStateAt(elapsedSeconds: number): ReplayState {
@@ -645,7 +645,7 @@ function drawRaceTopBar(
   context.font = "500 18px Arial, sans-serif";
   fillTracked(
     context,
-    `CLASSIFIED ${RACE.classifiedLaps} LAPS · OPENF1`,
+    `OFFICIAL CLASSIFICATION · OPENF1`,
     760,
     230,
     2,
@@ -712,9 +712,7 @@ function drawCurrentLapPanel(
     context.font = "600 27px Arial, sans-serif";
     fillTracked(
       context,
-      lap.lap <= RACE.classifiedLaps
-        ? `RACE SUSPENDED · ${formatLap(lap.time ?? 0)}`
-        : `RACE ENDED · OFFICIAL ${RACE.classifiedLaps} LAPS`,
+      `RACE SUSPENDED · ${formatLap(lap.time ?? 0)}`,
       44,
       634,
       2,
@@ -933,7 +931,7 @@ function drawMainSpeedPanel(
     context.fillStyle = "rgba(232, 238, 247, 0.75)";
     context.font = "500 20px Arial, sans-serif";
     context.fillText(
-      displayLap.lap <= RACE.classifiedLaps ? "RACE SUSPENDED BY RED FLAG" : "NO LAPS RAN · OFFICIAL CLASSIFICATION",
+      "RACE SUSPENDED BY RED FLAG",
       1624,
       508,
     );
@@ -983,12 +981,12 @@ function drawRaceBottomBar(context: CanvasRenderingContext2D, width: number, hei
  *
  * 版式沿用原来的「左侧大字 + 右侧面板」骨架，只把内容换成：
  * - 左：当前圈数 / 圈速 / 名次 / 三个统计 / 三段用时；
- * - 右：本圈速度曲线 + 逐圈日志 + 71 格时间轴；
- * - 顶：RACE、LAP xx/71、赛道状态、天气；
+ * - 右：本圈速度曲线 + 逐圈日志 + 69 格时间轴；
+ * - 顶：RACE、LAP xx/69、赛道状态、天气；
  * - 底：车队、回放节奏、数据来源。
  *
- * 第 33 圈（红旗中断）和第 70/71 圈（没跑的两圈）都不画假曲线，
- * 直接显示 RED FLAG，避免把 25 分钟静止段压成一条平线。
+ * 第 33 圈（红旗中断）不画假曲线，直接显示 RED FLAG，
+ * 避免把 25 分钟静止段压成一条平线。
  */
 export function createRaceWallTexture(): {
   texture: CanvasTexture;
@@ -1271,10 +1269,8 @@ function drawSideFooter(
   context.textAlign = "left";
 }
 
-/** 红旗卡片：第 33 圈是真实中断，第 70/71 圈是没跑的两圈，文案要区分 */
+/** 红旗卡片：第 33 圈是真实中断，只显示卡片、不画静止段 */
 function drawRedFlagCard(context: CanvasRenderingContext2D, width: number, height: number, lap: RaceLap): void {
-  const missingLaps = lap.lap > RACE.classifiedLaps;
-
   context.fillStyle = "rgba(225, 6, 0, 0.12)";
   context.fillRect(40, 140, width - 80, height - 280);
   context.strokeStyle = "rgba(225, 6, 0, 0.6)";
@@ -1302,14 +1298,12 @@ function drawRedFlagCard(context: CanvasRenderingContext2D, width: number, heigh
 
   context.fillStyle = "#f2f6fb";
   context.font = "700 32px Arial, sans-serif";
-  fillTracked(context, missingLaps ? "RACE ENDED" : "RACE SUSPENDED", 76, 366, 5);
+  fillTracked(context, "RACE SUSPENDED", 76, 366, 5);
 
   context.fillStyle = "rgba(232, 238, 247, 0.78)";
   context.font = '500 22px Consolas, "Courier New", monospace';
   context.fillText(
-    missingLaps
-      ? `LAP ${lap.lap} / ${RACE_LAPS} · OFFICIAL ${RACE.classifiedLaps} LAPS`
-      : `LAP ${lap.lap} / ${RACE_LAPS} · OFFICIAL ${formatLap(lap.time ?? 0)}`,
+    `LAP ${lap.lap} / ${RACE_LAPS} · OFFICIAL ${formatLap(lap.time ?? 0)}`,
     76,
     416,
   );

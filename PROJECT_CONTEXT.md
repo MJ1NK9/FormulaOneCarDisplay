@@ -77,7 +77,7 @@ src/
 │   ├── showroom.ts         # 展示间布景：房间 + 每件道具的参数与摆位（Phase 2.5）
 │   ├── videoScreen.ts      # ★ 前墙视频：本地 MP4 / 赛事周末信息 / 播控层可见性阈值
 │   └── scene.ts            # 相机、灯光、渲染器、OrbitControls、自适应取景参数
-├── data/                   # 2024 圣保罗正赛遥测（JSON，69 圈官方 + 2 圈红旗占位，见 README「遥测数据」）
+├── data/                   # 2024 圣保罗正赛遥测（JSON，69 圈官方，见 README「遥测数据」）
 ├── core/
 │   ├── SceneManager.ts     # Scene / Camera / 两个 Renderer / resize / 渲染循环 / frameObject
 │   ├── ModelLoader.ts      # GLTF 加载、居中、归一化、各向异性
@@ -258,9 +258,9 @@ export interface Hotspot {
 - 主屏顶部 150px 是赛事字标（FORMULA 1 LENOVO SÃO PAULO GRAND PRIX 2024），
   下面是场次栏和天气；字标只用字体 + 红色分隔线做同风格排版，不复制官方 logo
 - 主屏是 2024 圣保罗正赛逐圈回放：69 圈官方遥测来自 OpenF1（非官方），
-  展示上补到原定 71 圈，第 70、71 圈没有遥测、用红旗占位；数据在
-  `src/data/ver-2024-sao-paulo-race.json`。第 33 圈红旗中断同样只显示卡片、跳过静止段
-- 回放节奏：上电 1.3s 后发车，每 4s 一圈，播完 71 圈定格 5s 再循环；
+  按官方分类 69 圈播放；数据在 `src/data/ver-2024-sao-paulo-race.json`。
+  第 33 圈红旗中断只显示卡片、跳过静止段
+- 回放节奏：上电 1.3s 后发车，每 4s 一圈，播完 69 圈定格 5s 再循环；
   三块屏按 0.15s（约 6.7fps）重画 canvas，由 `SceneManager.onFrame` 驱动
 - 启动时三块屏各做一次 1.3s 的自上而下扫描上电，主屏先亮、左右副屏延后 0.12s 一起亮；
   遮罩只画在各自贴图里，不新增 DOM / 渲染层级，也不参与 LiftStage 的换模时序

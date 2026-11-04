@@ -168,7 +168,7 @@ export const VIDEO_SCREEN_CONFIG: VideoScreenConfig = {
     circuit: 'AUTÓDROMO JOSÉ CARLOS PACE',
     location: 'INTERLAGOS · SÃO PAULO, BRAZIL',
     dateRange: '01–03 NOV 2024',
-    laps: '71',
+    laps: '69',
     circuitLength: '4.309 KM',
     corners: '15',
     drsZones: '4',
