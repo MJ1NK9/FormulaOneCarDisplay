@@ -1,0 +1,24 @@
+{
+  "name": "rb19-web3d",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Web3D 单页作品集：浏览器中展示可交互的 F1 RB19 赛车模型，点击部件弹出科普信息",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.187.0",
+    "typescript": "~5.9.3",
+    "vite": "^6.4.5"
+  }
+}

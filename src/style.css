@@ -1,0 +1,27 @@
+/* 全屏 3D 视图：Phase 1 没有页面外壳，画布铺满视口 */
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  background: #0b0d10;
+  font-family: system-ui, -apple-system, 'Segoe UI', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+}
+
+#app {
+  position: relative;
+}
+
+canvas {
+  /* 消除行内元素的基线间隙，否则底部会多出几像素滚动条 */
+  display: block;
+}
