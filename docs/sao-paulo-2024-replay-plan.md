@@ -249,7 +249,7 @@ const dataSeconds = lapProgress * telemetrySecondsOf(lap);
 4. 文档里不再有「当前数据是上海 Q3」的表述。
    `PROJECT_CONTEXT.md:471` 的「移除旧上海站前墙视频」是历史迁移记录，保留事实不改写。
 
-> 视觉 / 手感最终由作者在浏览器拍板；本文档记录的是实现口径与已核对的无头截图结果。
+> 视觉 / 手感最终由作者在浏览器拍板；本文档记录的是实现口径与已核对截图结果。
 
 ---
 
@@ -262,4 +262,4 @@ const dataSeconds = lapProgress * telemetrySecondsOf(lap);
 | 逐圈名次是近似值 | OpenF1 位置事件稀疏，按圈起点取最近一条；画面只显示到整数名次 |
 | 0.55 MB JSON 进 bundle | 当前车模 6.6 MB、视频 66 MB，0.2 MB gzip 可接受；不改成运行时 fetch，避免新增异步状态 |
 | 刷新率 0.15s | 1.5s 一圈约 10 帧；低端机可退到 0.2s |
-| `docs/*.png` 未重跑 | 旧截图里可能还带上海字标；按项目约定不重跑整套截图流水线 |
+| README hero 已重拍 | 默认视角图换成本次圣保罗回放后的后墙；热点 / 布景等其余 docs 截图未重跑 |

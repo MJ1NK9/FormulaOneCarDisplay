@@ -9,7 +9,7 @@
 [![Vite](https://img.shields.io/badge/Vite-6.4-646cff?logo=vite&logoColor=white)](https://vite.dev/)
 [![AI Coding](https://img.shields.io/badge/AI_Coding-assisted-8a2be2)](#ai-coding-说明)
 
-![RB22 默认相机视角](docs/hero-default.png)
+![RB22 默认相机视角：后墙为 2024 圣保罗正赛逐圈回放](docs/hero-default.png)
 
 ---
 
