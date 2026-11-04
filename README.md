@@ -9,7 +9,9 @@
 [![Vite](https://img.shields.io/badge/Vite-6.4-646cff?logo=vite&logoColor=white)](https://vite.dev/)
 [![AI Coding](https://img.shields.io/badge/AI_Coding-assisted-8a2be2)](#ai-coding-说明)
 
-![RB22 默认相机视角：后墙为 2024 圣保罗正赛逐圈回放](docs/hero-default.png)
+![RB22 默认相机视角：后墙为 2024 圣保罗正赛逐圈回放](docs/hero-2024-sao-paulo.png)
+
+*后墙三屏：2024 巴西圣保罗大奖赛正赛逐圈回放（69 圈官方遥测 + 第 70/71 圈红旗占位，每圈 4s）。*
 
 ---
 
