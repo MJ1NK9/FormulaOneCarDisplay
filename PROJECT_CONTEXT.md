@@ -233,7 +233,7 @@ export interface Hotspot {
 
 - 背景不是 HDRI，是 `core/Showroom.ts` 用基础几何 + canvas 贴图搭的静态布景：
   **13.6 × 13.6 的封闭房间**——白色无缝环氧地坪、四面墙、踢脚线、四面灯带、天花板 + 天花灯带，
-  中间是发光展台与车，后墙挂**三屏遥测墙**（居中主屏 + 左右副屏），前墙挂**6.4 × 3.2 视频大屏**
+  中间是发光展台与车，后墙挂**三屏遥测墙**（居中主屏 + 左右副屏），前墙挂**8.18 × 4.6（16:9）视频大屏**
   （本地 `Ver2024.mp4`，屏幕下方是一块真实的 3D 控制台，DOM 播控面板贴在台面前表面），侧面是轮胎墙、工具墙，后墙右下角一台移动工具车
 - 房间是封闭的：相机在房间里绕车转（默认半径约 4.9），四面墙 + 天花板保证水平环绕
   任何角度都看不到「墙外」；这也是相机 `maxDistance = 6.4`、墙距 6.8 的由来
@@ -263,17 +263,17 @@ export interface Hotspot {
   （数值、分段条、SOC / 节气门曲线、胎温状态灯）；由 `SceneManager.onFrame` 驱动
 - 启动时三块屏各做一次 1.3s 的自上而下扫描上电，主屏先亮、左右副屏延后 0.12s 一起亮；
   遮罩只画在各自贴图里，不新增 DOM / 渲染层级，也不参与 LiftStage 的换模时序
-- 前墙（+Z，车头正前方）是**视频大屏**：6.4 × 3.2，与后墙主屏同尺寸、同一条水平中轴；
-  屏幕组 `position [0, 2.2, 6.66]`、`rotationY = π`（法线朝房间内），屏幕面在 6.61，
-  背板停在墙面之前 0.01，不穿墙、不 z-fighting。相机 `maxDistance = 6.4`，屏幕永远在
+- 前墙（+Z，车头正前方）是**视频大屏**：8.18 × 4.6（16:9，y 0.6–5.2），比后墙主屏更高、
+  与主屏同一条水平中轴；屏幕组 `position [0, 2.9, 6.76]`、`rotationY = π`（法线朝房间内），
+  屏幕面在 6.74，背板停在墙面之前 0.02，不穿墙、不 z-fighting。相机 `maxDistance ≈ 6.4`，屏幕永远在
   车、升降台、闸口、热点标记、全息层和左右副屏之后，**不参与遮挡判断**
 - 视频源是**本地文件** `public/videos/Ver2024.mp4`（1280×720 / H.264 + AAC / 8:46 /
   约 66 MB），由 `config/videoScreen.ts` 的 `src = 'videos/Ver2024.mp4'` 引用，
   `BASE_URL` 拼接成相对路径；**不用 iframe、不引用外部链接**。源文件最初在
   `dist/videos/`，项目复制到 `public/videos/` 供 dev / build 使用（`dist/` 是构建产物）
 - `core/props/videoWall.ts` 用 `HTMLVideoElement` + `VideoTexture` 把视频贴到 3D 屏幕：
-  16:9 视频按 **cover** 铺满 2:1 屏幕（裁上下，不拉伸）；`MeshBasicMaterial +
-  toneMapped:false`，和后墙三屏一致
+  8.18 / 4.6 与 1280×720 同为 16:9，画面按 cover 满铺整块屏，不裁不拉伸、也不叠任何图形；
+  `MeshBasicMaterial + toneMapped:false`，和后墙三屏一致
 - `video-wall` 已加回 `PropKind` / `buildProp` / `SHOWROOM_CONFIG.props`；`ShowroomHandle`
   额外暴露 `videoWall: VideoWallProp`，由 `App.vue` 转交给 `ui/VideoScreen.vue`
 - 播放策略：**默认静音 + 自动播放 + 循环**；屏幕第一次进入视锥连续可见 0.25s 后才拉流
@@ -286,14 +286,12 @@ export interface Hotspot {
 - 屏幕和屏幕下方控制台都是 **3D 物体**：屏幕有墙面安装板、加厚边框、四角固定螺钉、
   F1 红饰线；控制台 0.5 高、0.16 深，带金属端盖和红色台沿，是真正「钉在墙上」的
   硬件，不是悬浮 DOM 条
-- 播控层是 **DOM**（`ui/VideoScreen.vue`）：每帧拿屏幕面 / 控制台面的四角投影，
-  用 8 自由度单应矩阵（`ui/projectedQuad.ts`）把赛事标题条和控制面板贴到对应平面，
-  四条边和 3D 物体严格重合；相机绕车旋转时面板跟着透视；`z-index: 1` 在 canvas
-  之上、CSS2D 热点层（2）之下；屏幕太偏 / 太斜 / 出视口时屏幕图形与控制台分开收起
-- 屏幕上沿是 F1 转播风格标题条：官方全名（LENOVO SÃO PAULO GRAND PRIX 2024）、
-  ROUND 21、赛道官方名、日期；其下是比赛周末 ticker（FP1 / Sprint Q / Sprint /
-  Quali / Race 当地时间）；左侧轮次 / 城市条，右侧赛道数据（71 laps / 4.309 km /
-  15 corners / 4 DRS / lap record），底部信号状态（SIGNAL LOCKED · F1 WORLD FEED · HD 1080P）
+- 播控层是 **DOM**（`ui/VideoScreen.vue`）：每帧拿控制台面的四角投影，用 8 自由度单应
+  矩阵（`ui/projectedQuad.ts`）把播控面板贴到 3D 台面上，四条边和真实台面严格重合；
+  相机绕车旋转时面板跟着透视；`z-index: 1` 在 canvas 之上、CSS2D 热点层（2）之下；
+  屏幕太偏 / 太斜 / 出视口时控制台收起
+- 屏幕本身不叠任何 DOM：标题条 / ticker / 车手条 / 信号状态都已移除，16:9 视频满铺，
+  雨战画面就是屏上唯一的信息层
 - 控制台包含：播放 / 暂停（图标随真实 `paused` 切换，加载中转圈、失败变重试）、
   后退 / 前进 10s、原生 `<input type="range">` 进度条（点击 / 拖动 / 键盘，
   带已缓冲区间，拖动时每次 `input` 都 `seek()`，视频画面实时跟随）、
@@ -308,7 +306,8 @@ export interface Hotspot {
   只做非商业展示；版权归 UP 主与哔哩哔哩所有，署名写在页面左上角、「素材与授权」和「致谢」
   （封面 `public/videos/sao-paulo-2024-cover.jpg` 来自同一视频）
 
-> 开发预览：`?view=video`（仅 DEV）把相机放到车尾斜后方，正对前墙视频屏；
+> 开发预览：`?view=video`（仅 DEV）把相机落到约 1.3 m 高、正对前墙视频屏，
+> 整车与整块屏都在画面内；
 > `preview.html?view=video` 用无车模布景页看同一块屏。`preview.html` 的
 > `?view=tools|tires|front|video|under|low|cart|wall|wall-low` 仍用于核对侧视 /
 > 后视 / 车底 / 后墙三屏等构图；它不参与构建，只在本地手动打开。
@@ -463,11 +462,11 @@ idle → descending → closing → loading → opening → rising → success �
 - [x] 主屏顶部 150px 加赛事字标（上海大奖赛 / FORMULA 1 / CHINESE GRAND PRIX · SHANGHAI 2026），填掉桁架安全区的空白；只用字体 + 红色分隔线，不复制官方 logo
 - [x] 后墙主屏水平居中、三屏共用垂直中轴；默认机位收到约 22°、取景目标右移 0.6，保证主屏完整、右副屏大半入画
 - [x] 车抬到展台面、取景目标上移 0.45（车落到画面下半部，上方留给背墙/桁架）
-- [x] 前墙视频大屏（2024 圣保罗大奖赛，本地 `Ver2024.mp4`）：6.4 × 3.2 与后墙主屏
-      同尺寸、同中轴；静音自动播放 + 循环、懒加载、离开视锥暂停、加载 / 失败海报；
+- [x] 前墙视频大屏（2024 圣保罗大奖赛，本地 `Ver2024.mp4`）：8.18 × 4.6（16:9）；
+      静音自动播放 + 循环、懒加载、离开视锥暂停、加载 / 失败海报；
       屏幕加装墙面安装板 / 加厚边框 / 螺钉 / F1 红饰线，下方新增真实 3D 控制台；
-      屏幕上的赛事标题条（官方全名 / 轮次 / 赛道 / 周末 ticker / 赛道数据 / 信号状态）
-      与控制台面板都用单应矩阵贴到 3D 投影上，控制台不是悬浮 HUD，z-index 1 在热点层之下
+      画面不叠标题条 / ticker，播控面板用单应矩阵贴到 3D 台面投影上，
+      控制台不是悬浮 HUD，z-index 1 在热点层之下
 - [x] 移除旧 B 站 iframe / 旧 2026 上海站前墙视频，前墙只保留本地视频源；
       新增 `?view=video` 开发视角与 `preview.html?view=video` 前墙预览
 - [ ] 工具墙重定位：现在它在车侧面，默认机位看不到，只有转到最左侧才入画

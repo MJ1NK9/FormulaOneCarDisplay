@@ -670,8 +670,8 @@ async function loadModel(): Promise<void> {
     if (import.meta.env.DEV) {
       const preview = new URLSearchParams(window.location.search).get('view');
       if (preview === 'video') {
-        manager.camera.position.set(1.1, 2.0, -6.1);
-        manager.controls.target.set(0.25, 1.0, 0);
+        manager.camera.position.set(0.8, 1.3, -6.0);
+        manager.controls.target.set(0.15, 1.5, 0);
         manager.controls.update();
       }
     }
