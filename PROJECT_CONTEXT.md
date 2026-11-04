@@ -47,12 +47,18 @@
 | 相机控制 | `OrbitControls`（`three/addons/controls/`） | 禁止手写球面坐标控制器 |
 | 热点标记 | `CSS2DRenderer`（`three/addons/renderers/`） | 用 HTML 做标记，不用 3D Mesh 做标记 |
 | 拾取 | `Raycaster` | 只对“热点代理对象”做检测，见 §5.3 |
-| UI 层 | 原生 DOM + CSS（或极轻量框架，见下） | |
+| UI 层 | **Vue 3**（SFC + `<script setup>` + TS + 组合式 API） | 只负责信息面板 / 加载条 / 页面外壳；3D 层保持纯 Three.js |
 | 部署 | Vercel / Netlify 静态托管 | |
 
-**关于 UI 框架**：默认用原生 DOM 操作。若确有必要引入 Vue 或 React，
-**仅用于信息面板 / 加载条 / 页面外壳等 DOM 层**，3D 渲染层必须保持纯 Three.js，
-且需先向用户确认，不得擅自引入。
+**关于 UI 框架（已定）**：作者确认引入 Vue 3，用途严格限定在 DOM 层。
+
+- 允许：`App.vue`（页面外壳 + 装配 SceneManager）、`ui/*.vue`（信息面板、加载条）、
+  `composables/*`（Vue 与 Three 之间的唯一桥）
+- 禁止：用 Vue 渲染 3D（没有 r3f / tresjs 之类封装层）、引入 Pinia / Vuex / 组件库、
+  用选项式 API 写新组件
+- 桥接方式：Three 侧不认识 Vue；方向是 **Three → composable 的 ref → Vue 组件**
+- 为此新增 3 个官方依赖：`vue`、`@vitejs/plugin-vue`（编译 `.vue`）、
+  `vue-tsc`（`tsc` 无法检查 `.vue`，类型检查用它）
 
 ---
 
@@ -60,7 +66,8 @@
 
 ```
 src/
-├── main.ts                 # 入口：初始化应用、串联各模块
+├── main.ts                 # 入口：仅 createApp(App).mount('#app')
+├── App.vue                 # 根组件：全屏外壳 + 模板引用拿画布宿主 + 装配 SceneManager
 ├── config/
 │   ├── hotspots.ts         # ★ 热点数据（唯一数据源，见 §5.1）
 │   └── scene.ts            # 相机、灯光、渲染器、OrbitControls 参数常量
@@ -68,9 +75,13 @@ src/
 │   ├── SceneManager.ts     # Scene / Camera / Renderer / resize / 渲染循环
 │   ├── ModelLoader.ts      # GLTF 加载 + 进度回调 + 包围盒居中缩放
 │   └── HotspotSystem.ts    # ★ 热点系统：标记渲染 + Raycaster 拾取（见 §5）
+├── composables/
+│   └── useHotspots.ts      # Vue ↔ Three 的桥：把 3D 状态暴露成 ref（Phase 3 引入）
 ├── ui/
-│   ├── InfoPanel.ts        # 信息面板（DOM）
-│   └── LoadingBar.ts       # 加载进度条（DOM）
+│   ├── InfoPanel.vue       # 信息面板（Vue 组件）
+│   └── LoadingBar.vue      # 加载进度条（Vue 组件）
+├── dev/
+│   └── placeholderCube.ts  # Phase 1 占位立方体，Phase 2 删除
 ├── types/
 │   └── hotspot.ts          # Hotspot 接口定义
 └── assets/
@@ -79,8 +90,10 @@ src/
 
 **模块边界规则**：
 - `core/` 下的模块不得直接操作业务数据，只接收参数
-- `HotspotSystem` 不得 import `config/hotspots.ts`，数据由 `main.ts` 注入
-- `ui/` 模块只操作 DOM，不得 import `three`
+- `HotspotSystem` 不得 import `config/hotspots.ts`，数据由根组件注入
+- `ui/` 下的 `.vue` 组件只操作 DOM，**不得 import `three` / `three/addons/*`**
+- 只有根组件 `App.vue` 允许 `import './core/SceneManager'`（装配职责）；
+  Three API 的具体调用都在 `core/` 里
 
 ---
 
@@ -177,11 +190,17 @@ export interface Hotspot {
 
 > AI 每次工作前请确认当前阶段，只做该阶段内的事。
 
-**Phase 1（当前）— 跑通渲染骨架**
-- [ ] Vite + TS + Three.js 初始化
-- [ ] SceneManager：场景、相机、灯光、渲染循环、resize
-- [ ] OrbitControls 接入，用占位立方体验证拖拽旋转
-- [ ] 验收：`npm run dev` 打开页面能看到立方体并拖拽旋转，无报错
+**Phase 1 — 跑通渲染骨架（已完成）**
+- [x] Vite + TS + Three.js 初始化
+- [x] SceneManager：场景、相机、灯光、渲染循环、resize
+- [x] OrbitControls 接入，用占位立方体验证拖拽旋转
+- [x] 验收：headless 浏览器截图确认立方体渲染正常、类型检查零错误
+
+**Phase 1.5（当前）— 接入 Vue 3 外壳**
+- [x] 安装 vue / @vitejs/plugin-vue / vue-tsc，新增 `vite.config.ts`
+- [x] `main.ts` 改为 `createApp(App).mount('#app')`，3D 初始化移出入口
+- [ ] `App.vue`：模板引用 + `onMounted` 装配 SceneManager ← **由作者本人完成（已留白）**
+- [ ] 验收：`npm run dev` 看到立方体可拖拽；`npm run typecheck` 零错误
 
 **Phase 2 — 接入真实模型**
 - [ ] ModelLoader：GLTF 加载 + 进度 + 包围盒居中缩放 + 相机自动适配
@@ -221,6 +240,10 @@ export interface Hotspot {
 10. 禁止在未确认的情况下改动 `package.json` 依赖（新增依赖必须先说明理由并征得同意）
 11. 禁止把 3D 渲染逻辑写进 `main.ts` 或任何 UI 模块
 12. 禁止用 `console.log` 交付调试代码
+13. 禁止在 `ui/*.vue` 里 `import three`（装配只允许出现在 `App.vue`）
+14. 禁止用选项式 API（Options API）写新组件，统一 `<script setup lang="ts">`
+15. 禁止用 `tsc` 代替 `vue-tsc` 做类型检查——`tsc` 看不见 `.vue` 文件
+16. 禁止绕过 §13 的教学流程直接给出完整实现（作者明确要求时除外）
 
 ---
 
@@ -241,7 +264,8 @@ export interface Hotspot {
 
 ## 11. 验证与交付标准
 
-- 本地：`npm run dev` 无控制台报错；`npm run build` 通过；`tsc --noEmit` 无类型错误
+- 本地：`npm run dev` 无控制台报错；`npm run build` 通过；`vue-tsc --noEmit` 无类型错误
+  （注意：`tsc` 检查不到 `.vue`，必须用 `vue-tsc`）
 - 每次交付需说明：改了哪些文件、对应哪个 Phase 的哪个条目、如何手动验证
 - 不通过标准时不得声称“已完成”
 
