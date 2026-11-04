@@ -193,10 +193,15 @@ export class SceneManager {
    */
   frameObject(object: Object3D): void {
     const sphere = new Box3().setFromObject(object).getBoundingSphere(new Sphere());
-    const halfFov = (this.camera.fov * Math.PI) / 360;
 
-    // 竖直视野恰好装下包围球所需的距离；padding > 1 让画面留出边距
-    const distance = (sphere.radius * CAMERA_FIT_CONFIG.padding) / Math.sin(halfFov);
+    // 同时算竖直和水平视野：手机竖屏时水平视野更窄，只按竖直算会让车超出左右边界。
+    // 取两者中较小的那个（限制更强的一侧）来决定距离，横屏/桌面结果与原来一致。
+    const vFov = (this.camera.fov * Math.PI) / 180;
+    const hFov = 2 * Math.atan(Math.tan(vFov / 2) * this.camera.aspect);
+    const limitingHalfFov = Math.min(vFov, hFov) / 2;
+
+    // 限制视野恰好装下包围球所需的距离；padding > 1 让画面留出边距
+    const distance = (sphere.radius * CAMERA_FIT_CONFIG.padding) / Math.sin(limitingHalfFov);
 
     // 方向沿用固定机位（斜 45° 俯视），只把长度换成按模型算出来的距离
     const direction = new Vector3(...CAMERA_CONFIG.position).normalize();
