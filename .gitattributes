@@ -1,0 +1,11 @@
+# 统一换行符：仓库里存 LF，检出时按平台转换。
+# 不加这条，Windows 上每个文件提交时都会警告 "LF will be replaced by CRLF"。
+* text=auto eol=lf
+
+# 二进制资源不要做换行符转换，否则文件会被改坏
+*.png binary
+*.jpg binary
+*.webp binary
+*.glb binary
+*.gltf binary
+*.hdr binary
