@@ -13,6 +13,7 @@
  *   工具车收在后墙右下角（+X / -Z 角落），不挡默认视线的车。
  */
 import type { Vec3Tuple } from './scene';
+import { RACE_REPLAY_CONFIG } from './raceReplay';
 
 /** 一件道具的摆放：位置 + 绕 Y 轴旋转（弧度） */
 export interface PropPlacement {
@@ -126,7 +127,11 @@ export interface RaceWallConfig extends PropPlacement {
   readonly frameColor: string;
   /** 屏幕相对背板往前凸出的距离，避免 z-fighting */
   readonly screenOffset: number;
-  /** 刷新间隔（秒）：圈速/圈数微动即可，太快反而晃眼 */
+  /**
+   * 刷新间隔（秒）。
+   * 回放每 1.5s 推进一圈，需要约 10 帧/圈才不显得跳格；
+   * 具体值由 `RACE_REPLAY_CONFIG.screenRefreshSeconds` 统一给出。
+   */
   readonly refreshSeconds: number;
   /** 主屏上电扫描时长（秒）：三块屏共用，保证出现方式统一 */
   readonly bootSeconds: number;
@@ -324,7 +329,8 @@ export const SHOWROOM_CONFIG: ShowroomConfig = {
     height: MAIN_SCREEN_HEIGHT,
     frameColor: '#05080d',
     screenOffset: 0.05,
-    refreshSeconds: 2,
+    // 与左右副屏共用回放刷新率：1.5s 一圈约 10 帧，圈数和播放头都跟得上
+    refreshSeconds: RACE_REPLAY_CONFIG.screenRefreshSeconds,
     // 1.3s：和展示台灯带/扫描光的节奏接近，够看清从上到下「擦亮」的过程
     bootSeconds: 1.3,
     side: {
@@ -333,8 +339,8 @@ export const SHOWROOM_CONFIG: ShowroomConfig = {
       width: 2.4,
       height: 1.8,
       gap: 0.4,
-      // 0.9s：副屏数值变化比主屏更勤，但不至于每帧重画
-      refreshSeconds: 0.9,
+      // 副屏和主屏同频刷新：三块屏显示的是同一圈，刷新率不一致会看出错位
+      refreshSeconds: RACE_REPLAY_CONFIG.screenRefreshSeconds,
       // 主屏先亮，左右副屏延后 0.12s 一起亮：对称展开，不抢主屏的开场
       bootDelaySeconds: 0.12,
     },

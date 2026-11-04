@@ -12,8 +12,9 @@
  * 屏幕自己是光源，不该再被主光二次照亮，也不该被色调映射压暗。
  *
  * 刷新与上电：
- * - 主屏 2s、副屏 0.9s 重画一次 canvas，数值和图表持续变化；
- * - 启动时三块屏各做一次 1.15s 的自上而下扫描上电，主屏先亮、左右副屏延后
+ * - 三块屏按回放节奏以 `RACE_REPLAY_CONFIG.screenRefreshSeconds`（默认 0.15s）重画，
+ *   每 1.5s 推进一圈，圈数、速度曲线和左右副屏的读数保持同步；
+ * - 启动时三块屏各做一次 1.3s 的自上而下扫描上电，主屏先亮、左右副屏延后
  *   0.12s 一起亮。上电完全在贴图里完成，不新增 DOM / 渲染层级，也不参与
  *   LiftStage 的换模时序。
  */
@@ -142,7 +143,7 @@ export function createRaceWall(): RaceWallProp {
 
   // ── 左右副屏：以主屏为中心镜像展开，尺寸/间距/中轴全部来自配置 ──
   const sideCenterX = cfg.width / 2 + cfg.side.gap + cfg.side.width / 2;
-  const left = createTelemetryScreenTexture('energy');
+  const left = createTelemetryScreenTexture('speed');
   addScreenPanel(
     group,
     {
@@ -161,7 +162,7 @@ export function createRaceWall(): RaceWallProp {
     runtimes,
   );
 
-  const right = createTelemetryScreenTexture('aero');
+  const right = createTelemetryScreenTexture('inputs');
   addScreenPanel(
     group,
     {
