@@ -488,7 +488,18 @@ const retryPath = 'M20 12a8 8 0 1 1-2.4-5.7M20 4v6h-6';
  * - 字号用虚拟画布 px，整体由矩阵缩放，远近都是同一套版式。
  */
 .wall-console {
-  position: absolute;
+  /*
+   * 必须是 fixed，不能用 absolute。
+   *
+   * 这块面板的虚拟画布固定 1270×76（见 CONSOLE_STAGE_WIDTH），收起时
+   * `opacity: 0` 并不会把它从布局里拿掉。absolute 定位下它仍参与文档的
+   * 可滚动溢出计算：手机浏览器（Safari / Chrome 移动端）会把布局视口
+   * 撑到 1270px 宽，window.innerWidth / innerHeight 跟着变成 1270×2749。
+   * 于是所有 position: fixed 的 UI——最典型的就是热点信息卡在窄屏下的
+   * 贴底抽屉——会被摆到 2700px 之外的视口底部，用户点热点看起来“没反应”。
+   * fixed 元素不产生文档溢出，1270px 的收起态就不再影响视口尺寸。
+   */
+  position: fixed;
   top: 0;
   left: 0;
   z-index: 1;
