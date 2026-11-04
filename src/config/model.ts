@@ -6,8 +6,9 @@
  * 以后换车模只动这个文件，相机参数和布光不用跟着改。
  */
 
-/** 用 BASE_URL 拼路径：部署到子路径（如 GitHub Pages 的 /repo/）时也能正确取到文件 */
-const BASE_URL = import.meta.env.BASE_URL;
+// 模型文件不打进站点：36MB 超过免费静态托管的单文件上限，
+// 由 config/assets.ts 统一决定去 public/（开发）还是 COS（线上）
+import { assetUrl } from './assets';
 
 /**
  * 画质档位。
@@ -26,7 +27,7 @@ const BASE_URL = import.meta.env.BASE_URL;
 export type ModelQuality = 'high' | 'lite';
 
 export interface ModelVariant {
-  /** GLB 地址。文件放在 public/models/ 下，构建时原样拷贝，不打进 JS 包 */
+  /** GLB 地址。开发期读 public/models/，线上读 COS（见 config/assets.ts） */
   readonly url: string;
   /** 界面上显示的档位名 */
   readonly label: string;
@@ -36,12 +37,12 @@ export interface ModelVariant {
 
 export const MODEL_VARIANTS: Record<ModelQuality, ModelVariant> = {
   high: {
-    url: `${BASE_URL}models/rb22.glb`,
+    url: assetUrl('models/rb22.glb'),
     label: '高精度',
     bytes: 37_516_152,
   },
   lite: {
-    url: `${BASE_URL}models/rb22-lite.glb`,
+    url: assetUrl('models/rb22-lite.glb'),
     label: '低精度',
     bytes: 6_638_688,
   },

@@ -33,6 +33,7 @@ import {
   VideoTexture,
   type PerspectiveCamera,
 } from 'three';
+import { assetUrl } from '../../config/assets';
 import { VIDEO_SCREEN_CONFIG } from '../../config/videoScreen';
 import { SHOWROOM_CONFIG } from '../../config/showroom';
 import { createVideoWallPoster, type VideoWallStatus as PosterStatus } from '../ProceduralTextures';
@@ -658,8 +659,13 @@ export function createVideoWall(camera?: PerspectiveCamera): VideoWallProp {
     element.addEventListener('ended', handleEnded);
     element.addEventListener('resize', handleVideoResize);
 
+    // 视频要当 WebGL 贴图采样，浏览器要求这次请求是 CORS 请求；
+    // 不声明 crossOrigin 的话，跨域来源的帧在 texImage2D 时会抛 SecurityError。
+    // 必须先于 src 设置，否则浏览器已经按「无 CORS」把请求发出去了。
+    element.crossOrigin = 'anonymous';
+
     // 先设 muted / playsinline 再挂 src：移动端才不会拦自动播放
-    element.src = `${import.meta.env.BASE_URL}${media.src}`;
+    element.src = assetUrl(media.src);
     document.body.appendChild(element);
     video = element;
 

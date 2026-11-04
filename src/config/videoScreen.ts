@@ -6,15 +6,17 @@
  *
  * ───────────── 视频源 ─────────────
  *
- * 固定使用本地文件 `public/videos/Ver2024.mp4`（1280×720、H.264 + AAC、8:46），
- * 由 Vite 在 dev / build 时挂到站点根路径下的 `videos/`，页面里只写相对路径，
- * 不引用任何外部链接，也不经过 <iframe>：
+ * 开发期读 `public/videos/Ver2024.mp4`，线上读 COS 上的同名文件
+ * （地址解析见 `config/assets.ts`）；1280×720、H.264 + AAC、8:46。
+ * 两种情况下都是浏览器直接解码的原生 <video>，不经过 <iframe>：
  *
- * - 同源 + 本地文件，父页面可以直接读写 `video.currentTime / paused / volume`，
+ * - 直接操作 HTMLVideoElement，父页面能读写 `video.currentTime / paused / volume`，
  *   所以播放 / 暂停 / 拖动进度 / 音量都是「真实状态」；
  * - 文件体积 66 MB，首屏不下载：屏幕第一次进入相机视锥后由
  *   `core/props/videoWall.ts` 才开始拉流（见 `loadAfterVisibleSeconds`），
  *   默认机位背对前墙，所以不会和车模抢带宽；
+ * - 线上是跨域请求：video 元素必须声明 `crossorigin="anonymous"`，COS 桶也必须
+ *   配好 CORS，否则画面进不了 WebGL 贴图（texImage2D 会抛 SecurityError）；
  * - 来源：B 站 UP 主「一只萌萌哒chara」的《"Where is Max?"》
  *   （https://www.bilibili.com/video/BV1AJgP6GEPo/，原片 4K）；本项目只是转码成本地
  *   720p 文件用于非商业展示。视频版权归 UP 主与哔哩哔哩所有，本项目不声明任何权利，
