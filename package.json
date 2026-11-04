@@ -1,9 +1,9 @@
 {
-  "name": "rb19-web3d",
+  "name": "rb22-web3d",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Web3D 单页作品集：浏览器中展示可交互的 F1 RB19 赛车模型，点击部件弹出科普信息",
+  "description": "Web3D 单页作品集：浏览器中展示可交互的 F1 RB22 赛车模型，点击部件弹出科普信息",
   "engines": {
     "node": ">=20"
   },
@@ -18,6 +18,7 @@
     "vue": "^3.5.44"
   },
   "devDependencies": {
+    "@gltf-transform/cli": "^4.5.1",
     "@types/three": "^0.187.0",
     "@vitejs/plugin-vue": "^5.2.4",
     "typescript": "~5.9.3",

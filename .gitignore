@@ -6,6 +6,9 @@ dist/
 dist-ssr/
 *.local
 
+# 本地工具与原始素材（体积大，不进仓库）
+.tools/
+
 # 编辑器 / 系统
 .vscode/*
 !.vscode/extensions.json

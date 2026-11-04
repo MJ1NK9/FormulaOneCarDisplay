@@ -83,6 +83,13 @@ export interface RendererConfig {
   readonly maxPixelRatio: number;
 
   /**
+   * 超采样倍数：实际渲染分辨率 = devicePixelRatio × renderScale，再被 maxPixelRatio 截断。
+   * 1 = 不超采样。1x 屏上如果觉得轮胎、字标这类高频细节有锯齿，调到 1.5 会明显干净，
+   * 代价是像素量按平方增长（1.5 倍 → 2.25 倍填充率）。
+   */
+  readonly renderScale: number;
+
+  /**
    * 画布清屏色（十六进制 CSS 颜色字符串，如 '#0b0d10'）。
    * 用近黑色而不是纯黑，是因为纯黑看起来发灰、没有层次。
    * 为什么是 string 而不是 number：three 的 new Color('#0b0d10') 能直接解析
@@ -124,8 +131,9 @@ export interface ControlsConfig {
   readonly minDistance: number;
 
   /**
-   * 相机离注视点的最远距离。防止用户滚轮缩得太远，模型变成一个小点。
-   * 为什么是 number：距离。
+   * 相机离注视点的最远距离。
+   * 房间墙距原点 6.8，这里留 0.4 的余量：拉到最远也只是「贴到墙边」，
+   * 不会再穿到房间外面去。为什么是 number：距离。
    */
   readonly maxDistance: number;
 
@@ -134,7 +142,52 @@ export interface ControlsConfig {
    * 为什么是 Vec3Tuple：坐标三元组。
    */
   readonly target: Vec3Tuple;
+
+  /**
+   * 极角限位（弧度，0 = 正上方，PI/2 = 水平）。
+   * 上限 2.0（约 114°）越过水平线，镜头可以沉到地面以下从车底往上看；
+   * 下沉时地板/展台会被 UNDERBODY_CLIP_CONFIG 自动裁掉，不会挡住车底。
+   * 下限 1.05（约 60°）仍保留一点俯视余量，避免镜头贴到天花板。
+   */
+  readonly minPolarAngle: number;
+  readonly maxPolarAngle: number;
 }
+
+/* ───────────────────── 相机自适应（模型接入后） ───────────────────── */
+
+export interface CameraFitConfig {
+  /**
+   * 包围球半径 → 相机距离的留白系数。
+   * 相机距离 = 半径 × padding / sin(fov/2)，padding=1 时球正好顶满画面，
+   * 大于 1 才有呼吸空间；太小会显得车贴着画面边缘。
+   */
+  readonly padding: number;
+
+  /** 最近距离 = 包围球半径 × 这个系数：防止滚轮推到车内部穿模 */
+  readonly minDistanceRatio: number;
+
+  /** 最远距离 = 包围球半径 × 这个系数：防止滚轮拉远到车变成一个小点 */
+  readonly maxDistanceRatio: number;
+
+  /**
+   * 取景目标相对包围球中心的额外上移量。
+   * 为什么需要：车只有 0.89 高，如果死盯着车心，画面会全给地板和展台，
+   * 背墙和顶部结构全在画外。把注视点抬 0.45，车自然落到画面下半部，
+   * 上面留出背墙和灯桁架——这是「展示间」和「产品特写」的区别。
+   */
+  readonly targetOffsetY: number;
+}
+
+export const CAMERA_FIT_CONFIG: CameraFitConfig = {
+  // 0.88：比「刚好装下包围球」再收一点，车在画面里更有存在感；
+  // 房间只有 13.6 见方，收太多车头车尾会顶到画面边缘
+  padding: 0.88,
+  // 1.1：允许再靠近一点看细节，同时不会穿进车身
+  minDistanceRatio: 0.7,
+  // 包围球半径约 2.14，×3.0 ≈ 6.4；墙在 6.8，镜头拉到最远也只贴到墙边
+  maxDistanceRatio: 3.0,
+  targetOffsetY: 0.45
+};
 
 /* ───────────────────────── 灯光 ───────────────────────── */
 
@@ -152,17 +205,23 @@ export interface LightConfig {
 
   /**
    * 主光（key light）：负责造型，决定明暗交界线在哪，是全场景最重要的一盏。
-   * 相当于摄影棚里的主灯。
+   * 现在是 SpotLight（聚光灯），不再是平行光——这是「展示间」和「棚拍」的分水岭：
+   * 平行光照亮整间屋子，聚光只照亮车所在的圆，四周自然压暗，画面才有舞台感。
    */
   readonly key: {
     /** 颜色：纯白，不偏色，让模型呈现它本身的颜色 */ readonly color: string;
     /**
-     * 强度：2.6。
-     * 注意 three r155 之后灯光改用物理正确单位，强度不再是 0~1 的"比例"，
-     * 所以看到 2.6 这种大于 1 的值是正常的，不要以为写错了。
+     * 强度：200（坎德拉）。
+     * three r155 之后灯光是物理单位，聚光强度的量级由「距离²」决定：
+     * 8.3 米处的照度 ≈ 200 / 8.3² ≈ 2.9，和原来平行光的 2.8 大致等价。
      */
     readonly intensity: number;
     /** 位置：右上前方，从斜上方压下来，塑造立体感 */ readonly position: Vec3Tuple;
+    /** 照射目标：车中心略上方 */ readonly target: Vec3Tuple;
+    /** 光锥半角（弧度）：0.42 ≈ 24°，地面光斑半径约 3.7，刚好罩住车 */ readonly angle: number;
+    /** 边缘羽化：0 是硬边舞台灯，1 完全柔和；0.7 保留一点光斑形状但不生硬 */ readonly penumbra: number;
+    /** 衰减指数：2 是物理正确的平方反比 */ readonly decay: number;
+    /** 照射距离上限：0 表示不限制 */ readonly distance: number;
   };
 
   /**
@@ -174,7 +233,90 @@ export interface LightConfig {
     /** 强度：0.8，只做辅助，抢戏就错了 */ readonly intensity: number;
     /** 位置：左后下方，与主光大致相对 */ readonly position: Vec3Tuple;
   };
+
+  /**
+   * 轮廓光（rim light）：从车后斜上方打过来的冷色光。
+   * 作用是把车从深色墙背景里「剥」出来——没有它，深色车漆会和墙糊成一片。
+   * 背墙变亮之后，这盏灯也要跟着加强，否则车的边缘会被背墙吃掉。
+   */
+  readonly rim: {
+    readonly color: string;
+    readonly intensity: number;
+    readonly position: Vec3Tuple;
+  };
+
+  /** 环境贴图强度：车漆反射靠它，但调太高会把墙也一起照亮，光池就没了 */
+  readonly environmentIntensity: number;
+
+  /**
+   * 实用光（practical）：模拟灯带自身溢出的光。
+   * 灯带只是 emissive 面片，本身不照亮任何东西；不补这两盏点光，
+   * 灯带在墙上就是两条「冷冷的色块」，而不是「发光体」。
+   */
+  readonly practical: readonly PracticalLightConfig[];
 }
+
+export interface PracticalLightConfig {
+  readonly color: string;
+  readonly intensity: number;
+  readonly position: Vec3Tuple;
+  /** 影响半径：再远就衰减到看不见，避免白白给整间屋子上色 */
+  readonly distance: number;
+}
+
+/* ───────────────────────── 氛围与阴影 ───────────────────────── */
+
+export interface AtmosphereConfig {
+  /** 雾的起始距离：近处车身上不挂雾，只让墙和地坪远处淡出 */
+  readonly fogNear: number;
+  /** 雾的结束距离：超过它在视觉上完全融进背景色 */
+  readonly fogFar: number;
+}
+
+export const ATMOSPHERE_CONFIG: AtmosphereConfig = {
+  // 房间只有 13.6 见方，雾要往后推，不然四面墙会被雾洗成一片灰
+  fogNear: 8,
+  fogFar: 26
+};
+
+export interface ShadowConfig {
+  /** 阴影贴图分辨率：2048 对一辆车足够，再高只是浪费显存 */
+  readonly mapSize: number;
+  readonly near: number;
+  readonly far: number;
+  /** 深度偏移，消除自阴影的条纹（shadow acne） */
+  readonly bias: number;
+  /** 沿法线方向再推一点，处理薄片（翼片、端板）的漏光 */
+  readonly normalBias: number;
+  /** PCF 采样半径（像素）：越大阴影越软，太大边缘会发虚 */
+  readonly radius: number;
+}
+
+export const SHADOW_CONFIG: ShadowConfig = {
+  mapSize: 2048,
+  near: 1,
+  // 聚光灯在 7.4 高、目标在 0.6，深度范围 25 足够覆盖车、展台和工具
+  far: 25,
+  bias: -0.0004,
+  normalBias: 0.02,
+  radius: 3
+};
+
+/* ───────────────────── 车底视角裁剪 ───────────────────── */
+
+export interface UnderbodyClipConfig {
+  /**
+   * 裁剪面相对相机高度留的余量（场景单位）。
+   * 相机低于地面时，用一个「跟随相机高度」的水平裁剪面把地板、展台切掉，
+   * 否则从下往上看车底时，地面/底座会横在镜头和车之间。
+   * 留 0.02 是为了不把正踩在地面上的那一帧也切掉。
+   */
+  readonly margin: number;
+}
+
+export const UNDERBODY_CLIP_CONFIG: UnderbodyClipConfig = {
+  margin: 0.02
+};
 
 /* ───────────────────────── 实际取值 ───────────────────────── */
 
@@ -192,46 +334,75 @@ export interface LightConfig {
  */
 
 export const CAMERA_CONFIG: CameraConfig = {
+  // 45°：房间封顶之后需要比 40° 更广一点，四面墙和天花板才进得来
   fov: 45,
   near: 0.1,
   far: 100,
-  position: [6, 4, 8],
-  lookAt: [0, 0, 0],
+  position: [5.2, 2.6, 7.2],
+  lookAt: [0, 0, 0]
 };
 
 export const RENDERER_CONFIG: RendererConfig = {
   antialias: true,
   maxPixelRatio: 2,
-  clearColor: '#0b0d10',
-  toneMappingExposure: 1,
+  renderScale: 1,
+  clearColor: "#0b0d10",
+  toneMappingExposure: 1.05
 };
 
 export const CONTROLS_CONFIG: ControlsConfig = {
   enableDamping: true,
   dampingFactor: 0.05,
-  minDistance: 3,
-  maxDistance: 20,
-  target: [0, 0, 0],
+  minDistance: 2.4,
+  // 墙在 6.8，相机最远 6.4，刚好停在墙边、不会穿出去
+  maxDistance: 6.4,
+  target: [0, 0.55, 0],
+  minPolarAngle: 1.05,
+  // 2.0 rad ≈ 114.6°：越过水平线，配合地面裁剪可以钻到车底看底盘
+  maxPolarAngle: 2.0
 };
 
 /**
- * Phase 1 的临时布光：一个半球光打底 + 主光造型 + 冷色补光提轮廓。
- * Phase 2 会换成环境贴图（HDRI）以达到车漆质感，届时这组常量会整体重写。
+ * 布光：半球光打底 + 主光造型 + 冷色补光提轮廓。
+ * 车漆/碳纤维的反射主要来自 SceneManager 里生成的 RoomEnvironment 环境贴图，
+ * 这三盏灯负责明暗关系与轮廓，不替代环境贴图。
  */
 export const LIGHT_CONFIG: LightConfig = {
   hemisphere: {
-    skyColor: '#bfd6ff',
-    groundColor: '#2a2a2a',
-    intensity: 1.2,
+    skyColor: "#bfd6ff",
+    // 地面换成白色环氧地坪后，地面反弹回来的光不再是深灰：
+    // 这层偏暖的亮灰同时负责把车底/暗部托起来，白地板才不会「只亮地面不亮车」
+    groundColor: "#8a8880",
+    // 0.40：比旧地板时期略高，但仍是「柔和打底」，不抢主光
+    intensity: 0.4
   },
   key: {
-    color: '#ffffff',
-    intensity: 2.6,
-    position: [5, 8, 6],
+    color: "#ffffff",
+    // 灯从 y=4.6 打下来（天花板 5.2，必须在室内），到车约 5.7 米：95/32.7 ≈ 2.9
+    intensity: 95,
+    // 略微偏左前方：和机位保持约 25° 夹角，车正面有明暗，又不会把可见面压成黑的
+    position: [0.8, 4.6, 4.0],
+    target: [0, 0.6, 0],
+    angle: 0.46,
+    penumbra: 0.7,
+    decay: 2,
+    distance: 0
   },
   fill: {
-    color: '#7aa2ff',
-    intensity: 0.8,
-    position: [-6, 3, -4],
+    color: "#7aa2ff",
+    intensity: 0.45,
+    position: [-6, 3, -4]
   },
+  rim: {
+    color: "#8fb0ff",
+    intensity: 2.4,
+    position: [5, 6, -8]
+  },
+  environmentIntensity: 0.75,
+  practical: [
+    // 左墙灯带的溢光：照亮轮胎墙和地坪左半边
+    { color: "#cfe3ff", intensity: 6, position: [-5.6, 2.2, -3], distance: 7 },
+    // 右前工具墙一侧：离墙远一点、抬高一点，避免在穿孔板上打出一个死白的光斑
+    { color: "#cfe3ff", intensity: 4.5, position: [4.9, 2.6, -1], distance: 8 }
+  ]
 };

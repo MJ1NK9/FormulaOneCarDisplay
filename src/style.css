@@ -2,6 +2,11 @@
 
 :root {
   color-scheme: dark;
+
+  /* F1 官方视觉的主色：赛道红 + 近黑。卡片和圆点都引用这三个变量，避免各写各的红 */
+  --f1-red: #e10600;
+  --f1-black: #15151e;
+  --f1-white: #ffffff;
 }
 
 html,
@@ -24,4 +29,17 @@ body {
 canvas {
   /* 消除行内元素的基线间隙，否则底部会多出几像素滚动条 */
   display: block;
+}
+
+/* CSS2D 热点图层：压在 canvas 上方。
+   CSS2DRenderer 只设 width/height/overflow，不设定位；少了 position: absolute
+   它会变成画布下方的普通块，圆点会全部掉出屏幕。
+   事件同理：渲染器不负责 pointer-events，必须显式关掉，否则整层 DOM 会挡住
+   OrbitControls；只有圆点按钮自己开 auto（见 ui/hotspots.css） */
+.css2d-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  pointer-events: none;
 }

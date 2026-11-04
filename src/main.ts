@@ -4,6 +4,7 @@
  * 3D 的初始化不在这里：它依赖 DOM 就绪，放在 App.vue 的 onMounted 中。
  */
 import './style.css';
+import './ui/hotspots.css';
 import { createApp } from 'vue';
 import App from './App.vue';
 

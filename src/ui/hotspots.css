@@ -1,0 +1,137 @@
+/**
+ * 热点圆点的全局样式。
+ *
+ * 为什么放在全局 CSS 而不是 .vue 的 scoped 里：圆点 DOM 是 HotspotSystem 用
+ * document.createElement 建的（它不认识 Vue）。scoped 样式只作用于模板节点，
+ * 管不到这些手写 DOM，所以这里统一用 BEM 类名做全局约定。
+ *
+ * 尺寸参照 F1 转播的 3D 图形：圆点很小、白边很硬，只有 hover/激活时才出现文字标签。
+ */
+
+.hotspot {
+  /* CSS2DObject 会把 element 设成 position: absolute，这里不用重复声明 */
+  display: block;
+  /* 视觉只有 10px，但按钮热区放大到 24px：手指点得中，又不把车挡出一块大圆 */
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hotspot:focus-visible {
+  border-radius: 50%;
+  outline: 2px solid var(--f1-red);
+  outline-offset: 3px;
+}
+
+.hotspot__dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: var(--f1-red);
+  box-shadow:
+    0 0 0 4px rgb(225 6 0 / 20%),
+    0 4px 10px rgb(0 0 0 / 50%);
+  transform: translate(-50%, -50%);
+  transition:
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+/* 外圈脉冲：静态截图里看不出，动起来才有“可交互”的暗示 */
+.hotspot__dot::after {
+  position: absolute;
+  inset: -7px;
+  border: 1px solid rgb(225 6 0 / 55%);
+  border-radius: 50%;
+  content: '';
+  animation: hotspot-pulse 2.6s ease-out infinite;
+}
+
+.hotspot:hover .hotspot__dot,
+.hotspot:focus-visible .hotspot__dot {
+  background: #fff;
+  box-shadow:
+    0 0 0 4px rgb(225 6 0 / 55%),
+    0 4px 12px rgb(0 0 0 / 55%);
+}
+
+/* 打开状态：白芯 + 实心红环，和未激活的“红芯白边”形成明确区分 */
+.hotspot[aria-expanded='true'] .hotspot__dot {
+  background: #fff;
+  box-shadow:
+    0 0 0 3px var(--f1-red),
+    0 4px 14px rgb(0 0 0 / 60%);
+}
+
+.hotspot[aria-expanded='true'] .hotspot__dot::after {
+  inset: -5px;
+  border-color: #fff;
+  opacity: 0.55;
+  animation: none;
+}
+
+.hotspot__label {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  padding: 3px 7px;
+  border-left: 2px solid var(--f1-red);
+  background: rgb(12 13 18 / 88%);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  line-height: 1.2;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%);
+  transition: opacity 0.15s ease;
+  backdrop-filter: blur(4px);
+}
+
+.hotspot:hover .hotspot__label,
+.hotspot:focus-visible .hotspot__label {
+  opacity: 1;
+}
+
+/* 卡片已经显示了部件名，圆点旁边再挂一个标签就是重复信息 */
+.hotspot[aria-expanded='true'] .hotspot__label {
+  opacity: 0;
+}
+
+@keyframes hotspot-pulse {
+  0% {
+    opacity: 0.9;
+    transform: scale(0.6);
+  }
+
+  70% {
+    opacity: 0;
+    transform: scale(1.7);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.7);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hotspot__dot::after {
+    animation: none;
+    opacity: 0.5;
+  }
+}

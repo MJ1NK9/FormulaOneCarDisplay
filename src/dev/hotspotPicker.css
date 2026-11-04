@@ -1,0 +1,88 @@
+/**
+ * 取点面板的样式。只在 dev 的 ?pick 模式下加载，生产构建不会包含。
+ */
+
+.picker {
+  position: fixed;
+  bottom: 16px;
+  left: 16px;
+  z-index: 20;
+  width: min(320px, calc(100vw - 32px));
+  padding: 12px 14px;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-left: 3px solid var(--f1-red);
+  background: rgb(12 13 18 / 95%);
+  box-shadow: 0 16px 40px rgb(0 0 0 / 60%);
+  color: #d7e0ea;
+  font-size: 12px;
+  backdrop-filter: blur(10px);
+}
+
+.picker__head {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 0 0 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+}
+
+.picker__tag {
+  padding: 2px 5px;
+  background: var(--f1-red);
+  color: #fff;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+}
+
+.picker__hint {
+  margin: 0 0 8px;
+  color: #8fa0b3;
+  line-height: 1.6;
+}
+
+.picker__code {
+  margin: 0;
+  padding: 8px 10px;
+  min-height: 48px;
+  overflow-x: auto;
+  border: 1px solid rgb(255 255 255 / 8%);
+  background: rgb(0 0 0 / 35%);
+  color: #9fe3b4;
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.6;
+  white-space: pre;
+}
+
+.picker__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.picker__button {
+  padding: 6px 10px;
+  border: 1px solid var(--f1-red);
+  background: var(--f1-red);
+  color: #fff;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.picker__button:hover {
+  filter: brightness(1.12);
+}
+
+.picker__button--ghost {
+  border-color: rgb(255 255 255 / 18%);
+  background: transparent;
+  color: #c3cedb;
+}
+
+/* 取点模式下藏掉已配置的圆点：它们是 [0,0,0] 占位，只会挡视线 */
+body.is-picking .hotspot {
+  display: none;
+}
