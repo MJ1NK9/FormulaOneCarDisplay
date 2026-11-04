@@ -7,11 +7,13 @@
     <meta name="theme-color" content="#0b0e14" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <!--
-      车模和视频在 COS：HTML 解析时就提前建连，省掉一次 DNS + TLS 握手。
-      地址必须和 src/config/assets.ts 的 ASSET_BASE_URL 保持一致。
+      车模在成都 COS、视频在香港 COS 的自定义域名：HTML 解析时分别提前建连，
+      省掉一次 DNS + TLS 握手。地址必须和 src/config/assets.ts 保持一致。
     -->
     <link rel="preconnect" href="https://formula-one-1317097570.cos.ap-chengdu.myqcloud.com" crossorigin />
     <link rel="dns-prefetch" href="https://formula-one-1317097570.cos.ap-chengdu.myqcloud.com" />
+    <link rel="preconnect" href="https://assets.mj1nk9.space" crossorigin />
+    <link rel="dns-prefetch" href="https://assets.mj1nk9.space" />
     <title>RB22 · Web3D</title>
   </head>
   <body>
