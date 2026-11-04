@@ -129,7 +129,7 @@ export interface RaceWallConfig extends PropPlacement {
   readonly screenOffset: number;
   /**
    * 刷新间隔（秒）。
-   * 回放每 1.5s 推进一圈，需要约 10 帧/圈才不显得跳格；
+   * 回放每 4s 推进一圈，需要约 26 帧/圈才不显得跳格；
    * 具体值由 `RACE_REPLAY_CONFIG.screenRefreshSeconds` 统一给出。
    */
   readonly refreshSeconds: number;
@@ -329,7 +329,7 @@ export const SHOWROOM_CONFIG: ShowroomConfig = {
     height: MAIN_SCREEN_HEIGHT,
     frameColor: '#05080d',
     screenOffset: 0.05,
-    // 与左右副屏共用回放刷新率：1.5s 一圈约 10 帧，圈数和播放头都跟得上
+    // 与左右副屏共用回放刷新率：4s 一圈约 26 帧，圈数和播放头都跟得上
     refreshSeconds: RACE_REPLAY_CONFIG.screenRefreshSeconds,
     // 1.3s：和展示台灯带/扫描光的节奏接近，够看清从上到下「擦亮」的过程
     bootSeconds: 1.3,

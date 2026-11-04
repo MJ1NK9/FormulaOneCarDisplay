@@ -195,7 +195,7 @@ export function createFloorTexture(floor: RoomConfig["floor"]): CanvasTexture {
  *
  * 数据来自 OpenF1 的 2024 圣保罗正赛（session_key 9636）：
  * 官方分类 69 圈，展示上补到原定的 71 圈，第 70、71 圈没有遥测，
- * 用红旗占位各停 1.5s。时间轴常量在 `config/raceReplay.ts`。
+ * 用红旗占位各停 4s。时间轴常量在 `config/raceReplay.ts`。
  *
  * 为什么把圈数 / 播放头 / 完赛状态放在这里统一算：
  * 三块屏各自只有一张 canvas 贴图，刷新时刻也略有差异；只要它们都从
@@ -263,6 +263,7 @@ interface RaceTelemetry {
 const RACE = raceTelemetryJson as unknown as RaceTelemetry;
 const RACE_LAPS = RACE.lapList.length;
 const RACE_LAP_SECONDS = RACE_REPLAY_CONFIG.lapSeconds;
+const RACE_LAP_LABEL = Number.isInteger(RACE_LAP_SECONDS) ? `${RACE_LAP_SECONDS}S` : `${RACE_LAP_SECONDS.toFixed(1)}S`;
 const RACE_RACE_SECONDS = RACE_LAPS * RACE_LAP_SECONDS;
 const RACE_CYCLE_SECONDS = RACE_RACE_SECONDS + RACE_REPLAY_CONFIG.finishHoldSeconds;
 const EMPTY_SAMPLE: RaceSampleRow = [0, 0, 0, 0, 0, 0];
@@ -367,7 +368,7 @@ interface ReplayState {
 /**
  * 把「页面运行了多少秒」映射成「第几圈、圈内进度」。
  *
- * 上电扫描 1.5s 后发车；69 圈真实数据 + 2 圈红旗占位各 1.5s；
+ * 上电扫描 1.5s 后发车；69 圈真实数据 + 2 圈红旗占位各 4s；
  * 跑完后定格 5s，再从头循环。所有屏都调用这一个函数，状态天然一致。
  */
 function replayStateAt(elapsedSeconds: number): ReplayState {
@@ -507,7 +508,7 @@ function drawSweptTrace(
     context.shadowBlur = 0;
     context.restore();
 
-    // 播放头：落在当前读数上，1.5s 扫完整圈
+    // 播放头：落在当前读数上，4s 扫完整圈
     if (options.dots ?? true) {
       context.fillStyle = "#f2fbff";
       context.beginPath();
@@ -968,7 +969,7 @@ function drawRaceBottomBar(context: CanvasRenderingContext2D, width: number, hei
 
   context.fillStyle = "rgba(159, 179, 200, 0.72)";
   context.font = '500 21px Consolas, "Courier New", monospace';
-  context.fillText(`RACE REPLAY · 1 LAP = ${RACE_LAP_SECONDS.toFixed(1)}S · ${RACE_LAPS} LAPS`, 760, height - 56);
+  context.fillText(`RACE REPLAY · 1 LAP = ${RACE_LAP_LABEL} · ${RACE_LAPS} LAPS`, 760, height - 56);
 
   context.textAlign = "right";
   context.fillStyle = "rgba(159, 179, 200, 0.55)";
@@ -1472,7 +1473,7 @@ export function createTelemetryScreenTexture(side: TelemetrySide): {
       context.font = '500 15px Consolas, "Courier New", monospace';
       fillTracked(context, `VER · LAP ${displayLap.lap}/${RACE_LAPS}`, 40, 690, 2);
       context.textAlign = "right";
-      fillTracked(context, "1.5S / LAP", W - 40, 690, 2, "right");
+      fillTracked(context, `${RACE_LAP_LABEL} / LAP`, W - 40, 690, 2, "right");
       context.textAlign = "left";
     } else {
       context.textAlign = "left";
@@ -1540,7 +1541,7 @@ export function createTelemetryScreenTexture(side: TelemetrySide): {
         2,
       );
       context.textAlign = "right";
-      fillTracked(context, "1.5S / LAP", W - 40, 690, 2, "right");
+      fillTracked(context, `${RACE_LAP_LABEL} / LAP`, W - 40, 690, 2, "right");
       context.textAlign = "left";
     }
 

@@ -11,7 +11,7 @@
 
 把后墙三屏从「2026 上海站 Q3 单圈静态遥测」改成「2024 圣保罗正赛逐圈回放」：
 按正赛原定 **71 圈**展示，前 69 圈用 OpenF1 官方遥测，第 70、71 圈没有真数据、
-显示红旗占位；每圈 **1.5s**，主屏是回放仪表盘，左屏速度/RPM，右屏油门/刹车/挡位/分段；
+显示红旗占位；每圈 **4s**，主屏是回放仪表盘，左屏速度/RPM，右屏油门/刹车/挡位/分段；
 第 33 圈的真实红旗中断单独处理；播完 71 圈定格 5s 后循环。
 
 ---
@@ -53,7 +53,7 @@
    `redFlag: true`、`suspendedSeconds: 1433`；`time` 保留 1556.410，
    主屏日志显示「RED FLAG」而不是 25:56.410。
 3. **第 70、71 圈**：没有遥测，`samples: []`、`time: null`、`flag: "RED"`、
-   `redFlag: true`；回放里各占 1.5s，只显示红旗卡片。
+   `redFlag: true`；回放里各占 4s，只显示红旗卡片。
 4. **逐圈名次**：取该圈起点之前最近一条 `position` 事件。
    第 1 圈 P17；第 44 圈起 P1；完赛 P1。
 5. **逐圈天气**：取该圈起点之前最近一条 `weather`（air / track / wind），
@@ -135,8 +135,8 @@
 ```
 0 – 1.5s          上电扫描（主屏先亮，副屏 +0.12s）
 1.5s 起           第 1 圈
-每 1.5s          圈数 +1，遥测播放头扫完整圈
-1.5 + 71×1.5     第 71 圈结束（第 70/71 圈是红旗占位）
+每 4s            圈数 +1，遥测播放头扫完整圈
+1.5 + 71×4       第 71 圈结束（第 70/71 圈是红旗占位）
 + 5s             FINISH 定格
 + 循环           回到第 1 圈
 ```
@@ -146,7 +146,7 @@
 ```ts
 export const RACE_REPLAY_CONFIG = {
   startDelaySeconds: 1.5,
-  lapSeconds: 1.5,
+  lapSeconds: 4,
   finishHoldSeconds: 5,
   screenRefreshSeconds: 0.15
 } as const;
@@ -156,17 +156,17 @@ export const RACE_REPLAY_CONFIG = {
 
 ```ts
 const local = max(0, elapsedSeconds - 1.5);
-const cycle = 71 * 1.5 + 5;                 // 111.5s
+const cycle = 71 * 4 + 5;                   // 289s
 const cycleTime = local % cycle;
-const lapIndex = min(70, floor(cycleTime / 1.5));
-const lapProgress = cycleTime < 106.5
-  ? (cycleTime - lapIndex * 1.5) / 1.5
+const lapIndex = min(70, floor(cycleTime / 4));
+const lapProgress = cycleTime < 284
+  ? (cycleTime - lapIndex * 4) / 4
   : 1;
 const dataSeconds = lapProgress * telemetrySecondsOf(lap);
 ```
 
 第 33 圈只有约 25s 的行驶段，`telemetrySecondsOf` 取最后一个采样，
-所以不会把 25 分钟静止段塞进 1.5s 动画。
+所以不会把 25 分钟静止段塞进 4s 动画。
 
 ### 2.2 主屏（2048×1024）
 
@@ -178,7 +178,7 @@ const dataSeconds = lapProgress * telemetrySecondsOf(lap);
   （TOP SPEED / AVG SPEED / FULL THROTTLE）；S1 / S2 / S3。
 - 右区：本圈速度曲线（整圈暗线 + 已跑亮线 + 播放头）；逐圈日志（最近 5 行，
   新行追加、当前行高亮、红旗行显示 `RED FLAG`）；71 格时间轴（按圈状态染色）。
-- 底栏：`RED BULL RACING #1`、`RACE REPLAY · 1 LAP = 1.5S · 71 LAPS`、
+- 底栏：`RED BULL RACING #1`、`RACE REPLAY · 1 LAP = 4S · 71 LAPS`、
   `DATA · OPENF1 (UNOFFICIAL) · RB22`。
 - 第 71 圈（两圈红旗占位播完）后：`FINISH` / `2:06:54.430` / P1 / 69 圈统计；5s 后回第 1 圈。
 
@@ -188,7 +188,7 @@ const dataSeconds = lapProgress * telemetrySecondsOf(lap);
 - 大字当前速度 + `km/h`、`GEAR`、`RPM`。
 - 整圈速度曲线 + 播放头（和主屏同一条数据）。
 - `TOP SPEED` / `AVG SPEED` / `FULL THROTTLE`。
-- 底部 `VER · LAP xx/71`、`1.5S / LAP`。
+- 底部 `VER · LAP xx/71`、`4S / LAP`。
 
 ### 2.4 右副屏（输入 / 分段）
 
@@ -196,7 +196,7 @@ const dataSeconds = lapProgress * telemetrySecondsOf(lap);
 - 大字油门 % / 刹车 % / 挡位。
 - 油门（绿）/ 刹车（红）双曲线 + 播放头。
 - 三段用时 S1 / S2 / S3，本圈圈速 + 到当前个人最快圈的 Δ。
-- 底部 `LAP x:xx.xxx · Δ BEST`、`1.5S / LAP`。
+- 底部 `LAP x:xx.xxx · Δ BEST`、`4S / LAP`。
 
 ### 2.5 红旗圈
 
@@ -204,7 +204,7 @@ const dataSeconds = lapProgress * telemetrySecondsOf(lap);
   右区红色斜纹 + `SIGNAL SUSPENDED`；左右副屏红色卡片。
 - 第 70、71 圈：主屏显示 `RED FLAG` / `RACE ENDED · OFFICIAL 69 LAPS`；
   右区 `NO LAPS RAN · OFFICIAL CLASSIFICATION`；左右副屏红色卡片。
-- 三个红旗圈都只占 1.5s，然后继续下一圈；日志里对应行显示 `RED FLAG`。
+- 三个红旗圈都只占 4s，然后继续下一圈；日志里对应行显示 `RED FLAG`。
 
 ### 2.6 上电、刷新与性能
 
@@ -240,10 +240,10 @@ const dataSeconds = lapProgress * telemetrySecondsOf(lap);
 1. `npm run typecheck` 通过。
 2. `npm run build` 通过。
 3. `preview.html?view=wall` 实测：
-   - 上电后第 1 圈开始，圈数每 1.5s +1，直到 71。
+   - 上电后第 1 圈开始，圈数每 4s +1，直到 71。
    - 主屏圈速 / 名次 / 曲线 / 日志随圈数变化；日志逐圈追加。
    - 左屏速度 / RPM / TOP-AVG-FULL 与当前圈一致；右屏油门/刹车/挡位/三段一致。
-   - 第 33 圈红旗卡片，1.5s 后第 34 圈；第 70、71 圈红旗占位。
+   - 第 33 圈红旗卡片，4s 后第 34 圈；第 70、71 圈红旗占位。
    - 第 71 圈后 FINISH 定格 5s，再回第 1 圈。
    - 三屏同一圈同步；文字不溢出。
 4. 文档里不再有「当前数据是上海 Q3」的表述。
@@ -258,8 +258,8 @@ const dataSeconds = lapProgress * telemetrySecondsOf(lap);
 | 取舍 | 说明 |
 | --- | --- |
 | 第 70/71 圈是合成占位 | 官方只跑到 69 圈；按作者要求补到 71，画面明确写 `RACE ENDED · OFFICIAL 69 LAPS`，不伪造遥测 |
-| 第 33 圈只保留行驶段 | 25 分钟静止段会撑爆 1.5s 时间轴；日志仍保留真实圈速 25:56.410 |
+| 第 33 圈只保留行驶段 | 25 分钟静止段会撑爆 4s 时间轴；日志仍保留真实圈速 25:56.410 |
 | 逐圈名次是近似值 | OpenF1 位置事件稀疏，按圈起点取最近一条；画面只显示到整数名次 |
 | 0.55 MB JSON 进 bundle | 当前车模 6.6 MB、视频 66 MB，0.2 MB gzip 可接受；不改成运行时 fetch，避免新增异步状态 |
-| 刷新率 0.15s | 1.5s 一圈约 10 帧；低端机可退到 0.2s |
+| 刷新率 0.15s | 4s 一圈约 26 帧；低端机可退到 0.2s |
 | README hero 已重拍 | 默认视角图换成本次圣保罗回放后的后墙；热点 / 布景等其余 docs 截图未重跑 |
