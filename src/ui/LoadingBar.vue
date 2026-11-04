@@ -2,10 +2,10 @@
 /**
  * 加载进度条 —— 纯 DOM 组件，不 import three（架构约定：ui/ 只操作 DOM）。
  *
- * 两种状态：
+ * 三种状态：
  * 1. 有总量 → 显示真实百分比
  * 2. 没有总量（服务器没给 Content-Length）→ 显示来回流动的动画，避免假的百分比
- * 加载失败时整块变成错误提示，保证不会白屏（架构约定 §5.5）。
+ * 3. 失败 → 显示错误标题、原因和「重新加载」按钮，保证不会白屏（架构约定 §5.5）
  */
 import { computed } from 'vue';
 
@@ -14,9 +14,14 @@ interface Props {
   ratio: number;
   /** 失败信息；为 null 时表示没出错 */
   error: string | null;
+  /** 失败标题，按失败层级区分（车模加载 / 场景初始化 / 显卡上下文） */
+  errorTitle?: string;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+  errorTitle: '车模加载失败',
+});
+const emit = defineEmits<{ retry: [] }>();
 
 const percent = computed(() => Math.round(props.ratio * 100));
 const isIndeterminate = computed(() => props.ratio <= 0);
@@ -28,9 +33,12 @@ const isDecoding = computed(() => props.ratio >= 0.999);
 <template>
   <div class="loading" role="status" aria-live="polite">
     <template v-if="props.error">
-      <p class="loading__error">车模加载失败</p>
+      <p class="loading__error">{{ props.errorTitle }}</p>
       <p class="loading__detail">{{ props.error }}</p>
-      <p class="loading__detail">请刷新重试；若持续失败，看控制台里具体是哪个资源 404。</p>
+      <button class="loading__retry" type="button" @click="emit('retry')">重新加载</button>
+      <p class="loading__detail">
+        若仍失败，请换用新版 Chrome / Edge，并确认设备支持 WebGL 2。
+      </p>
     </template>
 
     <template v-else>
@@ -122,5 +130,25 @@ const isDecoding = computed(() => props.ratio >= 0.999);
   font-size: 12px;
   line-height: 1.6;
   word-break: break-word;
+}
+
+.loading__retry {
+  margin-top: 10px;
+  padding: 6px 14px;
+  border: 1px solid rgb(225 6 0 / 55%);
+  border-radius: 4px;
+  background: rgb(225 6 0 / 14%);
+  color: #ffd7d5;
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+
+.loading__retry:hover,
+.loading__retry:focus-visible {
+  border-color: var(--f1-red, #e10600);
+  background: rgb(225 6 0 / 26%);
+  outline: none;
 }
 </style>

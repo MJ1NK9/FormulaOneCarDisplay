@@ -24,6 +24,8 @@ const sceneHost = ref<HTMLDivElement | null>(null);
 const loadRatio = ref(0);
 const loading = ref(true);
 const loadError = ref<string | null>(null);
+/** 失败层级：车模加载 / 场景初始化 / 显卡上下文，决定错误卡片的标题 */
+const errorTitle = ref('车模加载失败');
 // 热点桥：只声明状态，真正创建 HotspotSystem 要等车模加载完（坐标依赖模型矩阵）
 const {
   activeHotspot,
@@ -65,32 +67,68 @@ function handleProgress(progress: LoadProgress): void {
   loadRatio.value = progress.ratio;
 }
 
-onMounted(async () => {
-  if (!sceneHost.value) return;
+/** 把 unknown 异常转成可读文案，避免把 [object Object] 直接印到页面上 */
+function toErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
 
-  sceneManager = new SceneManager(sceneHost.value);
+/**
+ * WebGL 2 能力预检。
+ * Three r187 的 WebGLRenderer 只支持 WebGL 2：旧设备、关闭硬件加速、远程桌面里
+ * 直接 new 会抛错，而那时页面还没有任何 UI，用户只会看到白屏 + 假进度。
+ * 先探测再创建，才能给出可读的失败原因。
+ */
+function supportsWebGL2(): boolean {
+  try {
+    const canvas = document.createElement('canvas');
+    const gl = canvas.getContext('webgl2');
+    if (!gl) return false;
+    // 主动释放这次探测创建的上下文，避免占用浏览器的 WebGL 上下文配额
+    gl.getExtension('WEBGL_lose_context')?.loseContext();
+    return true;
+  } catch {
+    return false;
+  }
+}
 
-  // 展示间先于模型入场景：模型加载期间背景已经是工房，不会先看到黑屏再突然换景
-  // 把 SceneManager 的地面裁剪面传进去：相机沉到车底时地板/展台自动让开
-  showroom = createShowroom(SHOWROOM_CONFIG, {
-    floorClipPlane: sceneManager.floorClipPlane,
-  });
-  sceneManager.scene.add(showroom.root);
+/** 场景级失败：统一收起加载态并展示错误卡片 */
+function setSceneError(title: string, detail: string): void {
+  errorTitle.value = title;
+  loadError.value = detail;
+  loading.value = false;
+}
 
-  // 计时屏这类会动的道具挂在 SceneManager 的单一渲染循环上，不再另起 RAF
-  stopShowroomFrames = sceneManager.onFrame((deltaSeconds) => {
-    showroom?.update(deltaSeconds);
-  });
+/**
+ * 显卡上下文丢失：标签页长时间后台、显存不足或驱动重置都会触发。
+ * 阻止默认行为可以让浏览器有机会恢复，但恢复后 Three 的显存资源需要重建；
+ * 这里直接停掉渲染循环并提示重新加载，避免控制台刷屏和画面冻结。
+ */
+function handleContextLost(event: Event): void {
+  event.preventDefault();
+  sceneManager?.stop();
+  setSceneError(
+    '显卡上下文中断',
+    '浏览器回收了 WebGL 上下文（常见于显存不足或标签页长时间后台）。重新加载即可恢复。',
+  );
+}
 
-  sceneManager.start();
+/** 所有失败都走整页重载：车模与场景资源需要完整重建，比局部重试更可靠 */
+function handleRetry(): void {
+  window.location.reload();
+}
+
+/** 车模加载：与场景初始化分开，失败时场景仍在，错误卡片能压在画面上 */
+async function loadModel(): Promise<void> {
+  if (!sceneManager) return;
 
   modelLoader = new ModelLoader(sceneManager.renderer);
 
   try {
     const { object } = await modelLoader.load(handleProgress);
 
-    // 加载期间组件可能已被卸载（快速切页 / HMR），此时 sceneManager 已被置空
-    if (!sceneManager) return;
+    // 加载期间组件可能已被卸载（快速切页 / HMR），或显卡上下文已丢失；
+    // 两种情况都不该再把车加进场景
+    if (!sceneManager || loadError.value) return;
 
     // 后面还有一次 await（动态 import 取点工具），先抓住当前实例；
     // 卸载时它会被 dispose，所以用完再和 sceneManager 比对一次
@@ -120,10 +158,56 @@ onMounted(async () => {
       attachHotspots({ sceneManager: manager, model: object });
     }
   } catch (error) {
-    loadError.value = error instanceof Error ? error.message : String(error);
+    errorTitle.value = '车模加载失败';
+    loadError.value = toErrorMessage(error);
   } finally {
     loading.value = false;
   }
+}
+
+onMounted(async () => {
+  const host = sceneHost.value;
+  if (!host) return;
+
+  if (!supportsWebGL2()) {
+    setSceneError(
+      '无法启动 3D 场景',
+      '当前浏览器或设备不支持 WebGL 2。请换用新版 Chrome / Edge，并在系统设置中开启硬件加速。',
+    );
+    return;
+  }
+
+  let manager: SceneManager;
+  try {
+    manager = new SceneManager(host);
+  } catch (error) {
+    setSceneError('3D 场景初始化失败', toErrorMessage(error));
+    return;
+  }
+  sceneManager = manager;
+
+  try {
+    // 展示间先于模型入场景：模型加载期间背景已经是工房，不会先看到黑屏再突然换景
+    // 把 SceneManager 的地面裁剪面传进去：相机沉到车底时地板/展台自动让开
+    showroom = createShowroom(SHOWROOM_CONFIG, {
+      floorClipPlane: manager.floorClipPlane,
+    });
+    manager.scene.add(showroom.root);
+
+    // 计时屏这类会动的道具挂在 SceneManager 的单一渲染循环上，不再另起 RAF
+    stopShowroomFrames = manager.onFrame((deltaSeconds) => {
+      showroom?.update(deltaSeconds);
+    });
+
+    manager.start();
+  } catch (error) {
+    setSceneError('3D 场景初始化失败', toErrorMessage(error));
+    return;
+  }
+
+  manager.renderer.domElement.addEventListener('webglcontextlost', handleContextLost);
+
+  await loadModel();
 });
 
 onBeforeUnmount(() => {
@@ -132,6 +216,7 @@ onBeforeUnmount(() => {
   devPicker = null;
   detachHotspots();
 
+  sceneManager?.renderer.domElement.removeEventListener('webglcontextlost', handleContextLost);
   modelLoader = null;
   stopShowroomFrames?.();
   stopShowroomFrames = null;
@@ -155,7 +240,13 @@ onBeforeUnmount(() => {
       @change="setHotspotsEnabled"
     />
     <HotspotCard :hotspot="activeHotspot" :anchor="anchor" @close="closeHotspot" />
-    <LoadingBar v-if="loading || loadError" :ratio="loadRatio" :error="loadError" />
+    <LoadingBar
+      v-if="loading || loadError"
+      :ratio="loadRatio"
+      :error="loadError"
+      :error-title="errorTitle"
+      @retry="handleRetry"
+    />
   </div>
 </template>
 
