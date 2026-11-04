@@ -2,19 +2,17 @@
  * ModelLoader —— 车模加载与「摆正」的唯一入口。
  *
  * 职责：
- * 1. 用 GLTFLoader 加载 GLB（当前用的是未压缩模型：贴图 PNG，没有 Draco/KTX2）
+ * 1. 用 GLTFLoader 加载 GLB（两档都用浏览器原生能力：WebP 贴图 + 量化属性，不需要解码器）
  * 2. 给贴图开各向异性过滤（轮胎、字标这类斜看细节靠它压锯齿）
  * 3. 按包围盒居中、归一化，让相机参数不依赖模型原始比例
  *
  * 不做的事：不创建 Scene / Camera，不碰 DOM，也不知道进度条长什么样——
- * 进度通过回调交给上层（App.vue → LoadingBar），这里只负责把数字抛出去。
- *
- * 注意：如果以后换回压缩模型（Draco 几何 / KTX2 贴图），需要重新接上
- * DRACOLoader + KTX2Loader，并把解码器文件放进 public/。
+ * 进度通过回调交给上层（App.vue → LoadingBar / 画质切换控件），这里只负责把数字抛出去。
  */
-import { Box3, Group, Mesh, Texture, Vector3, type Material, type WebGLRenderer } from 'three';
+import { Box3, Group, Mesh, Texture, Vector3, type Material, type Object3D, type WebGLRenderer } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { MODEL_CONFIG } from '../config/model';
+import { MODEL_CONFIG, MODEL_VARIANTS, type ModelQuality } from '../config/model';
+import { disposeObject3D } from './dispose';
 
 /**
  * 给材质上的所有贴图打开各向异性过滤。
@@ -22,12 +20,28 @@ import { MODEL_CONFIG } from '../config/model';
  * 为什么需要：贴图与视线夹角越大（轮胎侧壁、地坪），一个像素覆盖的纹素就越多。
  * anisotropy = 1 时 GPU 只能选一个 mip 层，斜看就会出现锯齿和闪烁；
  * 开大以后沿视线方向多采几组样，远处斜看会干净很多。
+ *
+ * 用 Object.values 遍历而不是逐个列 map / normalMap：PBR 材质会带
+ * specularMap、emissiveMap 等一堆贴图，列不全就会漏掉几张。
  */
 function applyAnisotropy(material: Material, anisotropy: number): void {
   const record = material as unknown as Record<string, unknown>;
   for (const value of Object.values(record)) {
     if (value instanceof Texture) value.anisotropy = anisotropy;
   }
+}
+
+/**
+ * 释放一棵车模子树的 GPU 资源。
+ *
+ * 为什么必须显式做：three 不会因为对象从场景里移除就回收显存——
+ * 几何体、材质、贴图都要自己 dispose。切画质时如果漏掉，「旧车」的 4K PNG
+ * 仍然占着几百 MB，新旧两套一叠加，手机上直接 WEBGL_lose_context。
+ *
+ * 具体实现放在 core/dispose.ts：展台、升降台也用同一套逻辑，避免三处各写一份。
+ */
+export function disposeModel(root: Object3D): void {
+  disposeObject3D(root);
 }
 
 /** 下载进度。total 为 0 时说明响应没有 Content-Length，算不出百分比 */
@@ -61,8 +75,10 @@ export class ModelLoader {
    * 坐标系转换放在最前面，因为包围盒必须在「已摆正」的坐标里量，
    * 否则量到的长宽高还是 Z-up 下的轴序，归一化会把车「竖起来」算。
    */
-  async load(onProgress: (progress: LoadProgress) => void): Promise<LoadedModel> {
-    const gltf = await this.gltfLoader.loadAsync(MODEL_CONFIG.url, (event) => {
+  async load(quality: ModelQuality, onProgress: (progress: LoadProgress) => void): Promise<LoadedModel> {
+    const variant = MODEL_VARIANTS[quality];
+
+    const gltf = await this.gltfLoader.loadAsync(variant.url, (event) => {
       const total = event.total;
       const loaded = event.loaded;
       onProgress({

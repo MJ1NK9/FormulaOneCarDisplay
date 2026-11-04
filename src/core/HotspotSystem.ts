@@ -75,6 +75,16 @@ export class HotspotSystem {
   /** 总开关：关闭时圆点隐藏、代理球不参与拾取（对应页面右上角的开关） */
   private enabled = true;
 
+  /**
+   * 全局透明度包络（0~1）：换模动画开始时整体淡出、升起完成后整体淡入。
+   * 它乘在「背向淡出」的结果上，所以不会破坏原有的法线淡出逻辑。
+   */
+  private fadeAlpha = 1;
+  private fadeFrom = 1;
+  private fadeTarget = 1;
+  private fadeDuration = 0;
+  private fadeElapsed = 0;
+
   constructor(options: HotspotSystemOptions) {
     this.options = options;
     this.root.name = 'hotspots';
@@ -125,10 +135,37 @@ export class HotspotSystem {
     }
   }
 
+  /**
+   * 整体淡入淡出（换模动画专用）。
+   *
+   * seconds = 0 表示立刻生效：新挂载的 HotspotSystem 用它把初始透明度对齐到
+   * "当前应该隐藏还是显示"，否则新车升起后会先闪一下再淡入。
+   */
+  setFade(target: number, seconds: number): void {
+    const clamped = Math.min(1, Math.max(0, target));
+    this.fadeFrom = this.fadeAlpha;
+    this.fadeTarget = clamped;
+    this.fadeDuration = Math.max(seconds, 0);
+    this.fadeElapsed = 0;
+
+    if (this.fadeDuration === 0) {
+      this.fadeAlpha = clamped;
+      for (const entry of this.entries) entry.lastOpacity = -1;
+    }
+  }
+
   /** 每帧调用：按「热点法线 vs 镜头方向」淡出圆点 */
-  update(): void {
+  update(deltaSeconds = 0): void {
     // 关闭时连淡出计算都不用跑；重新打开时 setEnabled 会把 lastOpacity 清成 -1
     if (!this.enabled) return;
+
+    if (this.fadeElapsed < this.fadeDuration) {
+      this.fadeElapsed = Math.min(this.fadeElapsed + deltaSeconds, this.fadeDuration);
+      const ratio = this.fadeElapsed / this.fadeDuration;
+      this.fadeAlpha = this.fadeFrom + (this.fadeTarget - this.fadeFrom) * ratio;
+    } else if (this.fadeAlpha !== this.fadeTarget) {
+      this.fadeAlpha = this.fadeTarget;
+    }
 
     const cameraPosition = this.options.camera.position;
     const fadeStart = HOTSPOT_VIEW_CONFIG.markerFadeStart;
@@ -137,7 +174,8 @@ export class HotspotSystem {
     for (const entry of this.entries) {
       this.viewDirection.subVectors(cameraPosition, entry.worldPosition).normalize();
       const facing = entry.worldNormal.dot(this.viewDirection);
-      const opacity = Math.min(1, Math.max(0, (facing - fadeStart) / fadeSpan));
+      const facingOpacity = Math.min(1, Math.max(0, (facing - fadeStart) / fadeSpan));
+      const opacity = facingOpacity * this.fadeAlpha;
 
       if (Math.abs(opacity - entry.lastOpacity) < 0.01) continue;
       entry.lastOpacity = opacity;

@@ -4,8 +4,8 @@
  * 职责：
  * 1. 搭「房间」：地坪、四面墙、踢脚线、灯带、天花板；
  * 2. 按 SHOWROOM_CONFIG.props 的顺序把道具挂上去；
- * 3. 收集需要每帧更新的道具（赛事大屏），对外提供 update；
- * 4. 提供 dispose，切页 / HMR 时把 GPU 资源还回去。
+ * 3. 收集需要每帧更新的道具（后墙三屏），对外提供 update；
+ * 4. 提供 dispose，切页 / HMR 时把 GPU 资源还回去（视频元素与 VideoTexture 由各自的 builder 释放）。
  *
  * 房间是封闭的正方形：相机在房间里绕车转，四面墙 + 天花板保证
  * 任何一个角度都看不到「墙外」的虚空，这是它和早期「两面墙布景」最大的区别。
@@ -16,18 +16,23 @@
  */
 import {
   BoxGeometry,
+  BufferAttribute,
   Color,
   Group,
   Mesh,
   MeshStandardMaterial,
+  Path,
   Plane,
   PlaneGeometry,
-  Texture,
-  type Object3D,
+  Shape,
+  ShapeGeometry,
+  type PerspectiveCamera,
 } from 'three';
 import { SHOWROOM_CONFIG, type RoomConfig, type ShowroomConfig } from '../config/showroom';
+import { disposeObject3D } from './dispose';
 import { createFloorTexture } from './ProceduralTextures';
 import { buildProp } from './props';
+import type { VideoWallProp } from './props/videoWall';
 
 export interface ShowroomHandle {
   /** 挂到 scene 上的根节点 */
@@ -36,6 +41,11 @@ export interface ShowroomHandle {
   update(deltaSeconds: number): void;
   /** 释放几何 / 材质 / 贴图 */
   dispose(): void;
+  /**
+   * 前墙视频屏控制器；没有注册 `video-wall` 时为 null。
+   * DOM 播控层需要它读真实播放状态、发指令、算屏幕 / 控制台投影。
+   */
+  readonly videoWall: VideoWallProp | null;
 }
 
 export interface ShowroomOptions {
@@ -45,6 +55,51 @@ export interface ShowroomOptions {
    * 平面对象由 SceneManager 持有并每帧更新高度；Showroom 只负责把它挂到材质上。
    */
   readonly floorClipPlane?: Plane;
+  /**
+   * 3D 相机：前墙视频屏用它判断屏幕是否在视口里、把屏幕四角投到屏幕上。
+   * 其他道具不依赖它。
+   */
+  readonly camera?: PerspectiveCamera;
+}
+
+/**
+ * 地坪几何：一整块平面，中间挖出升降口。
+ *
+ * 为什么不用四块平面拼：拼出来的接缝正好落在展台旁边，贴图密度也不连续；
+ * ShapeGeometry + 手动重算 UV 既保留一整块连续纹理，又只多一个孔。
+ * UV 按「顶点坐标 / 地坪尺寸」重映射，效果和原来的 PlaneGeometry 完全一致。
+ */
+function createFloorGeometry(room: RoomConfig): ShapeGeometry {
+  const size = room.floor.size;
+  const half = size / 2;
+  const halfOpeningWidth = room.floor.opening.width / 2;
+  const halfOpeningDepth = room.floor.opening.depth / 2;
+
+  const shape = new Shape();
+  shape.moveTo(-half, -half);
+  shape.lineTo(half, -half);
+  shape.lineTo(half, half);
+  shape.lineTo(-half, half);
+  shape.closePath();
+
+  // 孔洞用相反的绕向写，Earcut 才会把它当成"挖掉"而不是"叠一块"
+  const hole = new Path();
+  hole.moveTo(-halfOpeningWidth, -halfOpeningDepth);
+  hole.lineTo(-halfOpeningWidth, halfOpeningDepth);
+  hole.lineTo(halfOpeningWidth, halfOpeningDepth);
+  hole.lineTo(halfOpeningWidth, -halfOpeningDepth);
+  hole.closePath();
+  shape.holes.push(hole);
+
+  const geometry = new ShapeGeometry(shape);
+  const position = geometry.getAttribute('position');
+  const uv = new Float32Array(position.count * 2);
+  for (let i = 0; i < position.count; i += 1) {
+    uv[i * 2] = position.getX(i) / size + 0.5;
+    uv[i * 2 + 1] = position.getY(i) / size + 0.5;
+  }
+  geometry.setAttribute('uv', new BufferAttribute(uv, 2));
+  return geometry;
 }
 
 /** 房间本体：地坪 + 四面墙 + 踢脚线 + 灯带 + 天花板 */
@@ -56,7 +111,7 @@ function createRoom(room: RoomConfig, floorClipPlane?: Plane): Group {
   const half = distance;
 
   const floor = new Mesh(
-    new PlaneGeometry(room.floor.size, room.floor.size),
+    createFloorGeometry(room),
     new MeshStandardMaterial({
       // 底色画在贴图里，这里用白色避免二次乘算把地面压暗
       color: new Color('#ffffff'),
@@ -138,9 +193,10 @@ function createRoom(room: RoomConfig, floorClipPlane?: Plane): Group {
   const ledY = 4.05;
   const ledLength = width * 0.56;
 
+  // 前墙不装灯带：视频墙要整面干净，旧版屏幕上方那条白色灯带会正好压在
+  // 画面顶部。后墙 / 左右墙的灯带保留，房间的灯带语言不变。
   const ledBars: { x: number; z: number; rotationY: number }[] = [
     { x: 0, z: -half + 0.04, rotationY: 0 },
-    { x: 0, z: half - 0.04, rotationY: 0 },
     { x: -half + 0.04, z: 0, rotationY: Math.PI / 2 },
     { x: half - 0.04, z: 0, rotationY: Math.PI / 2 },
   ];
@@ -197,23 +253,6 @@ function createRoom(room: RoomConfig, floorClipPlane?: Plane): Group {
   return group;
 }
 
-/** 递归释放几何、材质和贴图（贴图挂在材质的某个字段上，只能反射着找） */
-function disposeTree(root: Object3D): void {
-  root.traverse((object) => {
-    if (!(object instanceof Mesh)) return;
-
-    object.geometry.dispose();
-    const materials = Array.isArray(object.material) ? object.material : [object.material];
-
-    for (const material of materials) {
-      for (const value of Object.values(material)) {
-        if (value instanceof Texture) value.dispose();
-      }
-      material.dispose();
-    }
-  });
-}
-
 export function createShowroom(
   config: ShowroomConfig = SHOWROOM_CONFIG,
   options: ShowroomOptions = {},
@@ -222,24 +261,34 @@ export function createShowroom(
   root.name = 'showroom';
   root.add(createRoom(config.room, options.floorClipPlane));
 
-  const updaters: ((elapsedSeconds: number) => void)[] = [];
+  const updaters: ((elapsedSeconds: number, deltaSeconds: number) => void)[] = [];
+  const disposers: (() => void)[] = [];
+  let videoWall: VideoWallProp | null = null;
   for (const kind of config.props) {
-    const built = buildProp(kind, { floorClipPlane: options.floorClipPlane });
+    const built = buildProp(kind, {
+      floorClipPlane: options.floorClipPlane,
+      camera: options.camera,
+    });
     root.add(built.object);
     if (built.update) updaters.push(built.update);
+    if (built.dispose) disposers.push(built.dispose);
+    if (built.videoWall) videoWall = built.videoWall;
   }
 
   let elapsed = 0;
 
   return {
     root,
+    videoWall,
     update(deltaSeconds: number): void {
       elapsed += deltaSeconds;
-      for (const update of updaters) update(elapsed);
+      for (const update of updaters) update(elapsed, deltaSeconds);
     },
     dispose(): void {
-      disposeTree(root);
-      root.removeFromParent();
+      // 先让有生命周期的道具释放自己（视频元素、解码器、VideoTexture），
+      // 再统一回收几何 / 材质 / 贴图；顺序反过来会在视频纹理仍被引用时重复释放。
+      for (const dispose of disposers) dispose();
+      disposeObject3D(root);
     },
   };
 }

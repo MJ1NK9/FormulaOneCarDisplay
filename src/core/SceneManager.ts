@@ -206,9 +206,11 @@ export class SceneManager {
     // 方向沿用固定机位（斜 45° 俯视），只把长度换成按模型算出来的距离
     const direction = new Vector3(...CAMERA_CONFIG.position).normalize();
 
-    // 注视点比车心略高：车落到画面下半部，上方才留得出背墙和桁架
+    // 注视点比车心略高：车落到画面下半部，上方才留得出背墙和桁架；
+    // 再向右偏一点：后墙三屏整体偏画面右侧，右移后主屏才能完整入画
     const target = sphere.center.clone();
     target.y += CAMERA_FIT_CONFIG.targetOffsetY;
+    target.x += CAMERA_FIT_CONFIG.targetOffsetX;
 
     this.camera.position.copy(sphere.center).addScaledVector(direction, distance);
     this.camera.lookAt(target);

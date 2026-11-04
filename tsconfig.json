@@ -4,6 +4,8 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "moduleResolution": "bundler",
+    /* 遥测数据以 JSON 形式放在 src/data/，直接 import 由 Vite 打进包里 */
+    "resolveJsonModule": true,
     /* 只引入 Vite 的客户端环境类型（*.css / 静态资源 / import.meta.env） */
     "types": ["vite/client"],
 

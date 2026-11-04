@@ -43,6 +43,11 @@ export interface HotspotBridge {
   detach(): void;
   close(): void;
   setEnabled(value: boolean): void;
+  /**
+   * 整体淡入 / 淡出：换模动画开始时淡出、升起完成后淡入。
+   * 新挂载的 HotspotSystem 会用它对齐初始透明度，所以先 fade 再 attach 也能生效。
+   */
+  fade(target: number, seconds: number): void;
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -60,6 +65,8 @@ export function useHotspots(hotspots: readonly Hotspot[]): HotspotBridge {
   let sceneManager: SceneManager | null = null;
   let stopFrame: (() => void) | null = null;
   let handleKeyDown: ((event: KeyboardEvent) => void) | null = null;
+  /** 当前透明度包络的目标值：detach 之后仍要记住，重新 attach 才能接上 */
+  let fadeAlpha = 1;
 
   const activeHotspot = computed<Hotspot | null>(
     () => hotspots.find((item) => item.id === activeId.value) ?? null,
@@ -144,6 +151,11 @@ export function useHotspots(hotspots: readonly Hotspot[]): HotspotBridge {
     if (!value) close();
   }
 
+  function fade(target: number, seconds: number): void {
+    fadeAlpha = Math.min(1, Math.max(0, target));
+    system?.setFade(fadeAlpha, seconds);
+  }
+
   function attach(options: HotspotBridgeOptions): void {
     detach();
 
@@ -164,11 +176,13 @@ export function useHotspots(hotspots: readonly Hotspot[]): HotspotBridge {
     options.sceneManager.scene.add(system.root);
     // 加载完成前用户可能已经关掉开关；创建系统后立刻补一次状态
     system.setEnabled(enabledState.value);
+    // 换模流程里热点是先淡出再拆、升起后再挂：新系统必须从当前包络起步，不能先亮一帧
+    system.setFade(fadeAlpha, 0);
 
     // 每帧两件轻活：圆点淡出 + 打开时投影一次锚点。
     // 关掉卡片后 updateAnchor 直接返回，不会留下无意义的 DOM 写入。
-    stopFrame = options.sceneManager.onFrame(() => {
-      system?.update();
+    stopFrame = options.sceneManager.onFrame((deltaSeconds) => {
+      system?.update(deltaSeconds);
       if (activeId.value) updateAnchor();
     });
 
@@ -197,5 +211,14 @@ export function useHotspots(hotspots: readonly Hotspot[]): HotspotBridge {
   // onBeforeUnmount 执行，保证热点 DOM/监听在 SceneManager 释放之前清干净
   onBeforeUnmount(detach);
 
-  return { activeHotspot, anchor, enabled, attach, detach, close, setEnabled };
+  return {
+    activeHotspot,
+    anchor,
+    enabled,
+    attach,
+    detach,
+    close,
+    setEnabled,
+    fade,
+  };
 }
