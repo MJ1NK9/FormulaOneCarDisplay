@@ -21,8 +21,6 @@ const sceneHost = ref<HTMLDivElement | null>(null);
 
 // TODO(你) ② 声明 3D 应用实例
 //   - 名字用 appManager
-//   - 用 let 而不是 const（为什么？见文末「思考题 A」）
-//   - 类型标注为 SceneManager | null，初值 null（为什么？见文末「思考题 B」）
 let appManager: SceneManager | null = null;
 
 onMounted(() => {
@@ -45,25 +43,10 @@ onMounted(() => {
 onBeforeUnmount(() => {
   // TODO(你) ⑦ 组件卸载时：释放 3D 资源，然后把 appManager 置回 null
   //   提示：appManager 可能还是 null，所以调用时要先判断（或可选链 ?.）
-  //   为什么必须做？见文末「思考题 C」
   appManager?.dispose();
   appManager = null;
 });
 
-/**
- * ─────────── 思考题（不用改代码，在对话里答给我）───────────
- *
- * A. `appManager` 为什么用 let 而不是 const？
- *    提示：想想 setup 执行时它的值是什么，onMounted 里又对它做了什么。
- *
- * B. 为什么类型要写成 `SceneManager | null`，而不是 `SceneManager`？
- *    提示：如果只写 `let appManager: SceneManager = null;`，TS 会报 TS2322，
- *    想想为什么编译器认为这是错的。
- *
- * C. 如果 onBeforeUnmount 里什么都不做（注释掉两行），会发生什么？
- *    实验：注释掉 → 改 src/config/scene.ts 的 clearColor 触发热更新 →
- *    F12 里看 .scene__host 下面有几个 <canvas>。那就是内存泄漏的现场。
- */
 </script>
 
 <template>
