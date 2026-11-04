@@ -230,6 +230,28 @@ onBeforeUnmount(() => {
 <template>
   <div class="scene">
     <div ref="sceneHost" class="scene__host" />
+    <!--
+      车模署名：CC BY 4.0 要求展示时保留作者与协议链接。
+      放在左上角，避开左下角操作提示、右上角热点开关和底部信息卡。
+    -->
+    <p class="scene__credit">
+      <span>车模</span>
+      <a
+        href="https://sketchfab.com/3d-models/2026-redbull-rb22-0a3d24a58e0549d591a5a48c22eec383"
+        target="_blank"
+        rel="noopener noreferrer"
+        title="在 Sketchfab 查看原模型"
+        >Tyler_Dave</a
+      >
+      <span aria-hidden="true">·</span>
+      <a
+        href="https://creativecommons.org/licenses/by/4.0/"
+        target="_blank"
+        rel="noopener noreferrer"
+        title="Creative Commons Attribution 4.0"
+        >CC BY 4.0</a
+      >
+    </p>
     <p v-if="showHint" class="scene__hint">
       <span class="scene__hint-icon" aria-hidden="true">i</span>
       点击车身圆点，查看部件官方信息
@@ -259,6 +281,38 @@ onBeforeUnmount(() => {
 .scene__host {
   position: absolute;
   inset: 0;
+}
+
+/* 车模署名：CC BY 4.0 要求展示时保留作者与协议，低调放在左上角 */
+.scene__credit {
+  position: absolute;
+  top: 16px;
+  left: 18px;
+  z-index: 4;
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  max-width: 42vw;
+  margin: 0;
+  color: rgb(207 216 227 / 62%);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  line-height: 1.4;
+  pointer-events: none;
+}
+
+.scene__credit a {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px solid rgb(255 255 255 / 16%);
+  pointer-events: auto;
+}
+
+.scene__credit a:hover,
+.scene__credit a:focus-visible {
+  color: #ffd7d5;
+  border-color: var(--f1-red);
+  outline: none;
 }
 
 /* 首屏操作提示：F1 风格的左下角小条，第一次打开卡片后就消失 */
@@ -313,6 +367,18 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 640px) {
+  .scene__credit {
+    top: 12px;
+    left: 12px;
+    max-width: 42vw;
+    font-size: 9px;
+  }
+
+  /* 窄屏优先保住作者与协议，省掉「车模」二字 */
+  .scene__credit > span:first-child {
+    display: none;
+  }
+
   .scene__hint {
     right: 14px;
     bottom: 14px;

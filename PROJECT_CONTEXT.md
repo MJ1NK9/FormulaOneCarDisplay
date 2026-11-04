@@ -200,6 +200,9 @@ export interface Hotspot {
 - 当前模型（`public/models/rb22.glb`）：约 35.8 MB；1 个 mesh / 27 个 primitive，
   约 28 万三角形；23 个材质、26 张 PNG 贴图（4096 起，显存约 330 MB）；
   **根节点自带 +90° X 旋转**，加载后已是 Y-up，代码里不要再补坐标轴旋转
+- **模型授权（硬约束）**：来源 Sketchfab「2026 Redbull RB22」by Tyler_Dave，协议
+  **CC BY 4.0**（允许商用，要求署名）。页面左上角与 README 必须保留作者、来源和协议链接，
+  不得移除；Red Bull / F1 等商标不在 CC 协议范围内
 - 加载后给所有贴图开各向异性过滤（`MODEL_CONFIG.maxAnisotropy`，上限 8）：
   轮胎、字标这类斜看细节靠它压锯齿；1x 屏仍明显时调 `RENDERER_CONFIG.renderScale`
 - 加载后用 `Box3` 计算包围盒：

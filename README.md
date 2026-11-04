@@ -141,6 +141,35 @@ src/
 
 ---
 
+## 素材与授权
+
+### 车模
+
+| 项 | 内容 |
+| --- | --- |
+| 作品 | [2026 Redbull RB22](https://sketchfab.com/3d-models/2026-redbull-rb22-0a3d24a58e0549d591a5a48c22eec383) |
+| 作者 | [Tyler_Dave](https://sketchfab.com/Tyler_Dave)（Dave Love SketchFab） |
+| 来源 | Sketchfab |
+| 协议 | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)（Creative Commons Attribution 4.0） |
+| 署名 | **必须**：保留作者、来源链接和协议链接 |
+| 商业使用 | **允许** |
+| 修改 / 二次创作 | **允许**，需注明修改 |
+| 再分发 | **允许**，需保留署名与协议 |
+| 下载 | 作者已开启下载 |
+
+**署名格式**（页面左上角已按此标注）：
+
+> "2026 Redbull RB22" by Tyler_Dave, licensed under CC BY 4.0.
+> Source: https://sketchfab.com/3d-models/2026-redbull-rb22-0a3d24a58e0549d591a5a48c22eec383
+> No changes were made to the model file.
+
+本项目未改动模型文件，只在场景中做了等比缩放与摆位。
+
+**边界说明**：CC BY 4.0 只覆盖模型文件本身。Red Bull、F1、Oracle、Mobil 等商标、
+车队标识与赞助商图形不在该协议内；本项目作为个人非商业作品集展示，不构成商标授权。
+
+---
+
 ## AI Coding 说明
 
 **本项目是一个 AI Coding（AI 辅助编程）实践项目。** 从架构文档、代码实现到 README，
@@ -164,7 +193,7 @@ src/
 
 从「能跑的作品集」到「可交付的线上作品」，按 P0 → P3 推进：
 
-- **P0 交付闭环**：部署、初始化兜底、联系方式、favicon / OG、素材授权
+- **P0 交付闭环**：部署、初始化兜底、联系方式、favicon / OG、素材授权（已完成车模 CC BY 标注）
 - **P1 体验质量**：移动端真机、画质分级、模型压缩、可访问性、内容校对
 - **P2 工程化**：CI、lint、测试、埋点、错误上报、拆包
 - **P3 呈现**：case study、演示 GIF、英文摘要
@@ -179,20 +208,22 @@ src/
 - **移动端取景**：`frameObject` 已同时考虑水平 / 竖直视野，竖屏首屏不会溢出；
   但旋转屏幕后不会自动重新取景，待 P1 与真机验收一起处理。
 - **热点遮挡是近似**：按法线淡出，不做真实遮挡，避免每帧 raycast。
-- **headless 截图受限**：26 张 4096² 贴图会让软件渲染崩掉，自动化截图只能跑
-  `preview.html`（不加载车模），完整画面靠人工验收。
-- **素材授权**：车模来源、Red Bull / F1 商标使用边界、署名要求待确认；
-  公开部署前需补页面致谢。
+- **headless 截图**：软件渲染（SwiftShader）遇到 26 张 4096² 贴图会崩；用 Chrome headless
+  加 GPU 后端、等 `.loading` 消失后再截可以出图，但这套流程不在 npm 脚本里。
+- **素材授权**：车模已确认 CC BY 4.0（允许商用，要求署名）；页面左上角与「素材与授权」
+  一节均已标注。商标使用边界见上节说明。
 - **代码协议**：暂未声明 LICENSE（保留所有权利），作者确认后再定。
 
 ---
 
 ## 致谢
 
-- 车模：待补充来源与作者
+- 车模：[2026 Redbull RB22](https://sketchfab.com/3d-models/2026-redbull-rb22-0a3d24a58e0549d591a5a48c22eec383)
+  by [Tyler_Dave](https://sketchfab.com/Tyler_Dave)，[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
 - 灵感：F1 官方转播包装、红牛车队工房视觉
 - 文档与实现：AI 编程助手（DeepSeek Harness）协作完成
 
 ## License
 
-待定。在明确协议前，代码与素材保留所有权利。
+代码协议待定（明确前保留所有权利）。车模素材不适用本条：其授权为
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)，详见「素材与授权」。
