@@ -1,7 +1,7 @@
 # RB22 · Web3D
 
 **浏览器里的 F1 赛车 3D 展示页**：加载红牛 RB22（2026 赛季）车模，360° 拖拽旋转，
-点击车身部件弹出科普信息卡。个人作品集 / 学习项目。[预览地址:www.mj1nk9.com](www.mj1nk9.com)
+点击车身部件弹出科普信息卡。个人作品集 / 学习项目。[预览地址:www.mj1nk9.space](www.mj1nk9.space)
 
 [![Vue](https://img.shields.io/badge/Vue-3.5-42b883?logo=vuedotjs&logoColor=white)](https://vuejs.org/)
 [![Three.js](https://img.shields.io/badge/Three.js-r187-000000?logo=threedotjs&logoColor=white)](https://threejs.org/)
