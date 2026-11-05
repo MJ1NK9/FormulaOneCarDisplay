@@ -9,7 +9,7 @@
 [![Vite](https://img.shields.io/badge/Vite-6.4-646cff?logo=vite&logoColor=white)](https://vite.dev/)
 [![AI Coding](https://img.shields.io/badge/AI_Coding-assisted-8a2be2)](#ai-coding-说明)
 
-![RB22 默认相机视角：后墙为 2024 圣保罗正赛逐圈回放](docs/hero-sao-paulo-2024-69.png)
+![RB22 默认相机视角：后墙为 2024 圣保罗正赛逐圈回放](https://cdn.jsdelivr.net/gh/MJ1NK9/FormulaOneCarDisplay@main/docs/hero-sao-paulo-2024-69.png)
 
 *后墙三屏：2024 巴西圣保罗大奖赛正赛逐圈回放（69 圈官方遥测，每圈 4s）。*
 
@@ -105,7 +105,7 @@
 
 ## 车头前墙视频大屏：本地 `Ver2024.mp4`
 
-![前墙视频大屏：雨战画面与墙装控制台](docs/video-wall.png)
+![前墙视频大屏：雨战画面与墙装控制台](https://cdn.jsdelivr.net/gh/MJ1NK9/FormulaOneCarDisplay@main/docs/video-wall.png)
 
 车头正前方（+Z 墙面）是一块 **8.18 × 4.6** 的视频大屏：按 16:9 取到前墙能容纳的
 最大高度（y 0.6–5.2），顶边贴着墙顶、底边压住控制台，左右留出的深色墙面与机房
